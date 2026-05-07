@@ -44,22 +44,22 @@ DiffusionMaps(; bandwidth::Union{Real,Nothing}=nothing, alpha::Real=0.5) =
     DiffusionMaps(bandwidth, alpha)
 
 """
-    compute_embedding(distances, alg::DiffusionMaps; kwargs...) -> EmbeddingSolution
+    compute_embedding(distances, alg::DiffusionMaps; kwargs...) -> EmbeddingResult
 
-When using the [`DiffusionMaps`](@ref) algorithm, the `sol.info` dictionary contains
+When using the [`DiffusionMaps`](@ref) algorithm, the `res.info` dictionary contains
 
-  - `sol.info["elapsed"]`: the elapsed time
-  - `sol.info["bandwidth"]`: the used bandwidth
-  - `sol.info["eigvals"]`: the eigenvalues of the diffusion matrix
-  - `sol.info["eigvecs"]`: the eigenvectors of the diffusion matrix
-  - `sol.info["dimension_estimate"]`: estimate of the manifold dimension
+  - `res.info["elapsed"]`: the elapsed time
+  - `res.info["bandwidth"]`: the used bandwidth
+  - `res.info["eigvals"]`: the eigenvalues of the diffusion matrix
+  - `res.info["eigvecs"]`: the eigenvectors of the diffusion matrix
+  - `res.info["dimension_estimate"]`: estimate of the manifold dimension
 """
 function compute_embedding(
     distances::AbstractMatrix{<:Real},
     alg::DiffusionMaps;
     n_coordinates::Int=typemax(Int),
     progress::Bool=false,
-)::EmbeddingSolution
+)::EmbeddingResult
     elapsed = @elapsed begin
         D_squared = distances .^ 2
         if isnothing(alg.bandwidth)
@@ -84,7 +84,7 @@ function compute_embedding(
         "elapsed" => elapsed,
         "dimension_estimate" => dimension_estimate,
     )
-    return EmbeddingSolution(coordinates, info)
+    return EmbeddingResult(coordinates, info)
 end
 
 """

@@ -16,7 +16,7 @@ GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20
 
 function compute_distances(
     data::AbstractArray{<:Real,3}, alg::GaussianVStatMMD; progress::Bool=false
-)::TransitionDistanceSolution
+)::TransitionDistanceResult
     # TODO: implement!
 
     error("Not implemented yet!")
@@ -59,16 +59,16 @@ end
 GaussianDStatMMD(; bandwidth=nothing) = GaussianDStatMMD(bandwidth)
 
 """
-    compute_distances(data, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceSolution
+    compute_distances(data, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceResult
 
-When using the [`GaussianDStatMMD`](@ref) algorithm, the `sol.info` dictionary contains
+When using the [`GaussianDStatMMD`](@ref) algorithm, the `res.info` dictionary contains
 
-  - `sol.info["elapsed"]`: the elapsed time
-  - `sol.info["bandwidth"]`: the used bandwidth
+  - `res.info["elapsed"]`: the elapsed time
+  - `res.info["bandwidth"]`: the used bandwidth
 """
 function compute_distances(
     data::AbstractArray{T,3}, alg::GaussianDStatMMD; progress::Bool=false
-)::TransitionDistanceSolution{T} where {T<:AbstractFloat}
+)::TransitionDistanceResult{T} where {T<:AbstractFloat}
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
         n_sub_sample = min(size(data, 2) * size(data, 3), 100) # 100 random points if possible
@@ -79,7 +79,7 @@ function compute_distances(
 
     t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
     t2 = @elapsed convert_kernel_to_distance_matrix!(D)
-    return TransitionDistanceSolution(
+    return TransitionDistanceResult(
         D, Dict("bandwidth" => alg.bandwidth, "elapsed" => t1 + t2)
     )
 end
@@ -87,7 +87,7 @@ end
 # This implementation casts integers to Float32. Floats are handled above.
 function compute_distances(
     data::AbstractArray{T,3}, alg::GaussianDStatMMD; kwargs...
-)::TransitionDistanceSolution where {T<:Real}
+)::TransitionDistanceResult where {T<:Real}
     @info "Casting data from $T to Float32 for distance computation"
     return compute_distances(Float32.(data), alg; kwargs...)
 end

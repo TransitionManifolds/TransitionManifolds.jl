@@ -45,23 +45,23 @@
     @testset "compute_embedding" begin
         @testset "output" begin
             alg = DiffusionMaps(0.123, 0.5)
-            sol = compute_embedding(D, alg; n_coordinates=3)
-            @test size(sol.coordinates) == (10, 3)
+            res = compute_embedding(D, alg; n_coordinates=3)
+            @test size(res.coordinates) == (10, 3)
 
-            @test sol.info["elapsed"] > 0
-            @test sol.info["bandwidth"] == 0.123
-            @test size(sol.info["eigvals"]) == (10,)
-            @test size(sol.info["eigvecs"]) == (10, 10)
-            @test sol.info["dimension_estimate"] > 0
+            @test res.info["elapsed"] > 0
+            @test res.info["bandwidth"] == 0.123
+            @test size(res.info["eigvals"]) == (10,)
+            @test size(res.info["eigvecs"]) == (10, 10)
+            @test res.info["dimension_estimate"] > 0
 
-            @test sol.coordinates[:, 1] ==
-                sol.info["eigvals"][2] * sol.info["eigvecs"][:, 2]
+            @test res.coordinates[:, 1] ==
+                res.info["eigvals"][2] * res.info["eigvecs"][:, 2]
         end
 
         @testset "automatic bandwidth" begin
             alg = DiffusionMaps()
-            sol = compute_embedding(D, alg)
-            @test sol.info["bandwidth"] > 0
+            res = compute_embedding(D, alg)
+            @test res.info["bandwidth"] > 0
         end
     end
 end

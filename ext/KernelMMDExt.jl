@@ -9,25 +9,25 @@ using StatsBase: mean
 
 # ---------------- KernelDStatMMD ---------------------------
 """
-    compute_distances(data, alg::KernelDStatMMD; kwargs...) -> TransitionDistanceSolution
+    compute_distances(data, alg::KernelDStatMMD; kwargs...) -> TransitionDistanceResult
 
-When using the [`KernelDStatMMD`](@ref) algorithm, the `sol.info` dictionary contains
+When using the [`KernelDStatMMD`](@ref) algorithm, the `res.info` dictionary contains
 
-  - `sol.info["elapsed"]`: the elapsed time
+  - `res.info["elapsed"]`: the elapsed time
 """
 function TransitionManifolds.compute_distances(
     data::AbstractArray{T,3}, alg::KernelDStatMMD{<:Kernel}; progress::Bool=false
-)::TransitionDistanceSolution{T} where {T<:AbstractFloat}
+)::TransitionDistanceResult{T} where {T<:AbstractFloat}
     !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
     t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
     t2 = @elapsed TransitionManifolds.convert_kernel_to_distance_matrix!(D)
-    return TransitionDistanceSolution(D, Dict("elapsed" => t1 + t2))
+    return TransitionDistanceResult(D, Dict("elapsed" => t1 + t2))
 end
 
 # This implementation casts integers to Float32. Floats are handled above.
 function TransitionManifolds.compute_distances(
     data::AbstractArray{T,3}, alg::KernelDStatMMD{<:Kernel}; kwargs...
-)::TransitionDistanceSolution where {T<:Real}
+)::TransitionDistanceResult where {T<:Real}
     @info "Casting data from $T to Float32 for distance computation"
     return compute_distances(Float32.(data), alg; kwargs...)
 end
@@ -96,25 +96,25 @@ end
 
 # ---------------- KernelVStatMMD ---------------------------
 """
-    compute_distances(data, alg::KernelVStatMMD; kwargs...) -> TransitionDistanceSolution
+    compute_distances(data, alg::KernelVStatMMD; kwargs...) -> TransitionDistanceResult
 
-When using the [`KernelVStatMMD`](@ref) algorithm, the `sol.info` dictionary contains
+When using the [`KernelVStatMMD`](@ref) algorithm, the `res.info` dictionary contains
 
-  - `sol.info["elapsed"]`: the elapsed time
+  - `res.info["elapsed"]`: the elapsed time
 """
 function TransitionManifolds.compute_distances(
     data::AbstractArray{T,3}, alg::KernelVStatMMD{<:Kernel}; progress::Bool=false
-)::TransitionDistanceSolution{T} where {T<:AbstractFloat}
+)::TransitionDistanceResult{T} where {T<:AbstractFloat}
     !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
     t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
     t2 = @elapsed TransitionManifolds.convert_kernel_to_distance_matrix!(D)
-    return TransitionDistanceSolution(D, Dict("elapsed" => t1 + t2))
+    return TransitionDistanceResult(D, Dict("elapsed" => t1 + t2))
 end
 
 # This implementation casts integers to Float32. Floats are handled above.
 function TransitionManifolds.compute_distances(
     data::AbstractArray{T,3}, alg::KernelVStatMMD{<:Kernel}; kwargs...
-)::TransitionDistanceSolution where {T<:Real}
+)::TransitionDistanceResult where {T<:Real}
     @info "Casting data from $T to Float32 for distance computation"
     return compute_distances(Float32.(data), alg; kwargs...)
 end

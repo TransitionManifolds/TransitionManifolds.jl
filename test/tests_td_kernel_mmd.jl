@@ -16,13 +16,13 @@ using KernelFunctions
         @testset "output" begin
             alg = KernelVStatMMD(kernel)
             x = rand(Float64, 2, 4, 3)
-            sol = compute_distances(x, alg)
+            res = compute_distances(x, alg)
 
-            @test size(sol.distances) == (3, 3)
-            @test issymmetric(sol.distances)
-            @test all(diag(sol.distances) .== 0)
+            @test size(res.distances) == (3, 3)
+            @test issymmetric(res.distances)
+            @test all(diag(res.distances) .== 0)
 
-            @test sol.info["elapsed"] > 0
+            @test res.info["elapsed"] > 0
         end
 
         @testset "types" begin
@@ -79,13 +79,13 @@ end
         @testset "output" begin
             alg = KernelDStatMMD(kernel)
             x = rand(Float64, 2, 4, 3)
-            sol = compute_distances(x, alg)
+            res = compute_distances(x, alg)
 
-            @test size(sol.distances) == (3, 3)
-            @test issymmetric(sol.distances)
-            @test all(diag(sol.distances) .== 0)
+            @test size(res.distances) == (3, 3)
+            @test issymmetric(res.distances)
+            @test all(diag(res.distances) .== 0)
 
-            @test sol.info["elapsed"] > 0
+            @test res.info["elapsed"] > 0
         end
 
         @testset "types" begin

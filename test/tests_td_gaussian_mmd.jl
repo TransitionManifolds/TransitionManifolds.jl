@@ -51,14 +51,14 @@
         @testset "output" begin
             alg = GaussianDStatMMD(0.123)
             x = rand(Float64, 2, 4, 3)
-            sol = compute_distances(x, alg)
+            res = compute_distances(x, alg)
 
-            @test size(sol.distances) == (3, 3)
-            @test issymmetric(sol.distances)
-            @test all(diag(sol.distances) .== 0)
+            @test size(res.distances) == (3, 3)
+            @test issymmetric(res.distances)
+            @test all(diag(res.distances) .== 0)
 
-            @test sol.info["bandwidth"] == 0.123
-            @test sol.info["elapsed"] > 0
+            @test res.info["bandwidth"] == 0.123
+            @test res.info["elapsed"] > 0
         end
 
         @testset "types" begin
@@ -98,8 +98,8 @@
         @testset "automatic bandwidth" begin
             alg = GaussianDStatMMD()
             x = rand(Float64, 2, 100, 3)
-            sol = compute_distances(x, alg)
-            @test sol.info["bandwidth"] > 0
+            res = compute_distances(x, alg)
+            @test res.info["bandwidth"] > 0
         end
     end
 end

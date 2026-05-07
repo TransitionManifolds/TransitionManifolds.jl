@@ -10,8 +10,8 @@ using ProgressMeter: Progress, next!
 
 # ------------- include files -----------------
 include("interface.jl")
-export AbstractTransitionDistanceAlgorithm, TransitionDistanceSolution, compute_distances
-export AbstractEmbeddingAlgorithm, EmbeddingSolution, compute_embedding
+export AbstractTransitionDistanceAlgorithm, TransitionDistanceResult, compute_distances
+export AbstractEmbeddingAlgorithm, EmbeddingResult, compute_embedding
 export compute_transition_manifold
 
 include("utils.jl")
