@@ -1,13 +1,13 @@
 using KernelFunctions
 
 @testset "KernelVStatMMD" begin
-    #NOTE: The code assumes a symetric kernel throughtout.
-    @testset "Non-Symmetric kernels" begin
+    @testset "warn if non-symmetric kernel" begin
         kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
         alg = KernelVStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
         @test_warn "The metric is not symmetric." compute_distances(x, alg)
     end
+
     @testset "compute_distances" begin
         # define Gaussian kernel
         bandwidth = 0.3
@@ -25,6 +25,28 @@ using KernelFunctions
             @test sol.info["elapsed"] > 0
         end
 
+        @testset "types" begin
+            alg = KernelVStatMMD(kernel)
+            x64 = rand(Float64, 2, 4, 3)
+            x32 = rand(Float32, 2, 4, 3)
+            x16 = rand(Float16, 2, 4, 3)
+
+            @test typeof(compute_distances(x64, alg).distances) == Array{Float64,2}
+            @test typeof(compute_distances(x32, alg).distances) == Array{Float32,2}
+            @test typeof(compute_distances(x16, alg).distances) == Array{Float16,2}
+        end
+
+        @testset "cast" begin
+            alg = KernelVStatMMD(kernel)
+            types = [Int64, Int32, UInt32]
+
+            @testset "$t" for t in types
+                x = rand(t, 2, 4, 3)
+                res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
+                @test typeof(res.distances) == Array{Float32,2}
+            end
+        end
+
         @testset "convergence to 0" begin
             alg = KernelVStatMMD(kernel)
             seed!(1234)
@@ -37,18 +59,18 @@ using KernelFunctions
             @test dmat[1, 2] < 0.01
         end
 
-        # TODO: More tests. Compare to GaussianVStatMMD
+        # TODO: Compare to GaussianVStatMMD
     end
 end
 
 @testset "KernelDStatMMD" begin
-    #NOTE: The code assumes a symetric kernel throughout.
-    @testset "Non-Symmetric kernels" begin
+    @testset "warn if non-symmetric kernel" begin
         kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
         alg = KernelDStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
         @test_warn "The metric is not symmetric." compute_distances(x, alg)
     end
+
     @testset "compute_distances" begin
         # define Gaussian kernel
         bandwidth = 0.3
@@ -64,6 +86,28 @@ end
             @test all(diag(sol.distances) .== 0)
 
             @test sol.info["elapsed"] > 0
+        end
+
+        @testset "types" begin
+            alg = KernelDStatMMD(kernel)
+            x64 = rand(Float64, 2, 4, 3)
+            x32 = rand(Float32, 2, 4, 3)
+            x16 = rand(Float16, 2, 4, 3)
+
+            @test typeof(compute_distances(x64, alg).distances) == Array{Float64,2}
+            @test typeof(compute_distances(x32, alg).distances) == Array{Float32,2}
+            @test typeof(compute_distances(x16, alg).distances) == Array{Float16,2}
+        end
+
+        @testset "cast" begin
+            alg = KernelDStatMMD(kernel)
+            types = [Int64, Int32, UInt32]
+
+            @testset "$t" for t in types
+                x = rand(t, 2, 4, 3)
+                res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
+                @test typeof(res.distances) == Array{Float32,2}
+            end
         end
 
         @testset "convergence to 0" begin
@@ -88,7 +132,5 @@ end
             D2 = compute_distances(x, alg2).distances
             @test D1 ≈ D2
         end
-
-        # TODO: More tests.
     end
 end
