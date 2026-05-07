@@ -18,7 +18,7 @@ See also [`compute_embedding`](@ref).
 abstract type AbstractEmbeddingAlgorithm end
 
 """
-    TransitionDistanceSolution
+    TransitionDistanceSolution{T<:Real}
 
 Struct for storing the solution of the transition distances computation,
 see [`compute_distances`](@ref).
@@ -29,7 +29,7 @@ struct TransitionDistanceSolution{T<:Real}
 end
 
 """
-    compute_distances(data::AbstractArray{T,3}, alg::AbstractTransitionDistanceAlgorithm; progress=false) where {T<:Real} -> TransitionDistanceSolution
+    compute_distances(data::AbstractArray{<:Real,3}, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> TransitionDistanceSolution
 
 Compute pairwise distances of transition density functions from `data`, returning a [`TransitionDistanceSolution`](@ref) object `sol`.
 
@@ -51,7 +51,7 @@ function compute_distances(
 end
 
 """
-    EmbeddingSolution{T} where {T<:Real}
+    EmbeddingSolution{T<:Real}
 
 Struct for storing the solution of the embedding computation,
 see [`compute_embedding`](@ref).
