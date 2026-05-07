@@ -1,4 +1,3 @@
-# ------------- Abstract Interface -----------------
 """
     AbstractTransitionDistanceAlgorithm
 
@@ -117,3 +116,48 @@ function compute_transition_manifold(
     )
     return (dres, eres)
 end
+
+"""
+    PreprocessResult{T<:Real}
+
+Struct for storing the result of [`preprocess`](@ref).
+"""
+struct PreprocessResult{T<:Real}
+    data::Array{T,3}
+    info::Dict{String,<:Any}
+end
+
+"""
+    preprocess(data) -> PreprocessResult
+
+Preprocess `data` so that it can be used in [`compute_distances`](@ref), returning a [`PreprocessResult`](@ref) object `res`.
+
+The result `res` contains the preprocessed data at `res.data`, and the `res.info` dictionary,
+which is used to store further information.
+
+See the methods below associated to different data types.
+"""
+function preprocess(data)::PreprocessResult
+    error("No implementation of `preprocess` for data of type `$(typeof(data))`")
+end
+
+"""
+    compute_distances(pres::PreprocessResult, alg::AbstractTransitionDistanceAlgorithm; kwargs...) -> TransitionDistanceResult
+
+A [`PreprocessResult`](@ref) `pres` can be provided instead of the `data` array.
+"""
+compute_distances(
+    pres::PreprocessResult, alg::AbstractTransitionDistanceAlgorithm; kwargs...
+) = compute_distances(pres.data, alg; kwargs...)
+
+"""
+    compute_transition_manifold(pres::PreprocessResult, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; kwargs...) -> Tuple{TransitionDistanceResult,EmbeddingResult}
+
+A [`PreprocessResult`](@ref) `pres` can be provided instead of the `data` array.
+"""
+compute_transition_manifold(
+    pres::PreprocessResult,
+    distance_alg::AbstractTransitionDistanceAlgorithm,
+    embedding_alg::AbstractEmbeddingAlgorithm;
+    kwargs...,
+) = compute_transition_manifold(pres.data, distance_alg, embedding_alg; kwargs...)

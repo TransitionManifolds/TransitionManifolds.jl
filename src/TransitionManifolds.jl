@@ -13,6 +13,7 @@ include("interface.jl")
 export AbstractTransitionDistanceAlgorithm, TransitionDistanceResult, compute_distances
 export AbstractEmbeddingAlgorithm, EmbeddingResult, compute_embedding
 export compute_transition_manifold
+export PreprocessResult, preprocess
 
 include("utils.jl")
 export normalize_cloud
