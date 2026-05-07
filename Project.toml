@@ -12,10 +12,12 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 
 [weakdeps]
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 KernelFunctions = "ec8451be-7e33-11e9-00cf-bbf324bd1392"
 
 [extensions]
 KernelMMDExt = "KernelFunctions"
+GraphsExt = "Graphs"
 
 [compat]
 Distances = "0.10.12"
@@ -32,4 +34,4 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "Random", "KernelFunctions"]
+test = ["Test", "Random", "KernelFunctions", "Graphs"]

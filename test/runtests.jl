@@ -11,3 +11,4 @@ include("tests_em_diffusion_maps.jl")
 
 # Extensions
 include("tests_td_kernel_mmd.jl")
+include("tests_graphs.jl")
