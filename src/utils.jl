@@ -11,7 +11,7 @@ The values below the diagonal of the `K` are not used in the computation (due to
 `D` will have all elements filled in and it will be 0 on the diagonal.
 Futhermore, the elements of `D` are guaranteed to be nonnegative by truncation.
 """
-function convert_kernel_to_distance_matrix!(K::AbstractMatrix{<:T}) where {T<:Real}
+function convert_kernel_to_distance_matrix!(K::AbstractMatrix{T}) where {T<:Real}
     for j in axes(K, 2)
         for i in 1:(j - 1)
             value = K[i, i] + K[j, j] - 2 * K[i, j]

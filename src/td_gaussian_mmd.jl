@@ -53,7 +53,6 @@ struct GaussianDStatMMD <: AbstractTransitionDistanceAlgorithm
         isnothing(bandwidth) ||
             bandwidth > 0 ||
             throw(ArgumentError("`bandwidth` has to be > 0"))
-        isa(bandwidth, Real) && Float64(bandwidth)
         return new(bandwidth)
     end
 end
@@ -85,7 +84,7 @@ function compute_distances(
     )
 end
 
-#This implementation cast the integers. Floats are handled above.
+# This implementation casts integers to Float32. Floats are handled above.
 function compute_distances(
     data::AbstractArray{T,3}, alg::GaussianDStatMMD; kwargs...
 )::TransitionDistanceSolution where {T<:Real}
