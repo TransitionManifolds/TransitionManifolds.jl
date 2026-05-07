@@ -94,6 +94,16 @@ compute_embedding(
     dres::TransitionDistanceResult, alg::AbstractEmbeddingAlgorithm; kwargs...
 ) = compute_embedding(dres.distances, alg; kwargs...)
 
+"""
+    compute_transition_manifold(data::AbstractArray{<:Real,3}, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; n_coordinates, progress::Bool=false) -> Tuple{TransitionDistanceResult,EmbeddingResult}
+
+Compute an embedding using the `embedding_alg` from the transition distances that are calculated using the `distance_alg`.
+
+This is an auxiliary function that simply first calls [`compute_distances`](@ref) and then [`compute_embedding`](@ref).
+
+The `data` should contain the endpoints of `n_samples` burst simulations for `n_anchor` anchor points,
+and have the shape `(d, n_samples, n_anchors)`.
+"""
 function compute_transition_manifold(
     data::AbstractArray{<:Real,3},
     distance_alg::AbstractTransitionDistanceAlgorithm,
