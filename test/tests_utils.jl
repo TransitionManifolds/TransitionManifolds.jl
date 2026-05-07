@@ -42,7 +42,8 @@ end
         expected = zeros(5, 3)
         expected[:, 1] = [-1.0, -0.5, 0.0, 0.5, 1.0]
         data_n = normalize_cloud(data; quant=0.99)
-        @test data_n ≈ expected
+        # could be rotated either way
+        @test data_n ≈ expected || data_n ≈ -expected
     end
 
     @testset "q=0.6" begin
@@ -51,7 +52,7 @@ end
         expected = zeros(5, 3)
         expected[:, 1] = [-2.0, -1.0, 0.0, 1.0, 2.0]
         data_n = normalize_cloud(data; quant=0.6)
-        # the "-" is because it gets rotated the other way around
-        @test data_n ≈ -expected
+        # could be rotated either way
+        @test data_n ≈ expected || data_n ≈ -expected
     end
 end
