@@ -20,6 +20,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelDStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
+    # TODO: also accept `Jagged` layout
     !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
     t1 = @elapsed D = compute_kernel_matrix(prob.data, alg; progress=progress)
     t2 = @elapsed TransitionManifolds.convert_kernel_to_distance_matrix!(D)
@@ -112,6 +113,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelVStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
+    # TODO: also accept `Jagged` layout
     !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
     t1 = @elapsed D = compute_kernel_matrix(prob.data, alg; progress=progress)
     t2 = @elapsed TransitionManifolds.convert_kernel_to_distance_matrix!(D)
