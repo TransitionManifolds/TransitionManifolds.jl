@@ -14,7 +14,9 @@ using Graphs
             expected = cat(
                 [flat_adj1 flat_adj3], [flat_adj2 flat_adj1], [flat_adj3 flat_adj2]; dims=3
             )
-            @test preprocess(data, :adjacency_matrix).data == expected
+            pres = preprocess(data, :adjacency_matrix)
+            @test pres.prob isa TransitionDistanceProblem{Float32,Nothing,Contiguous}
+            @test pres.prob.data == expected
         end
 
         @testset "throws when different number of nodes" begin

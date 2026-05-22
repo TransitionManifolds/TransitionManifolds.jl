@@ -59,7 +59,7 @@ In the `L=Contiguous` layout, the `data` is an `Array{T,3}`, i.e.,
 the number of samples `n_samples` is equal for each anchor,
 and the `data` has the shape `(d, n_samples, n_anchors)`.
 
-In the `L=Jagged` case, the `data` is an `Vector{Array{T,2}}`, i.e.,
+In the `L=Jagged` layout, the `data` is an `Vector{Array{T,2}}`, i.e.,
 each anchor may have a different number of samples,
 it is `length(data) = n_anchors`, and `size(data[i]) = (d, n_samples_i)`.
 
@@ -130,21 +130,20 @@ struct TransitionDistanceResult{T<:Real}
 end
 
 """
-    compute_distances(data::AbstractArray{<:Real,3}, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> TransitionDistanceResult
+    compute_distances(prob::TransitionDistanceProblem, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> TransitionDistanceResult
 
-Compute pairwise distances of transition density functions from `data`, returning a [`TransitionDistanceResult`](@ref) object `res`.
+Compute pairwise distances of transition density functions, returning a [`TransitionDistanceResult`](@ref) object `res`.
 
-The `data` should contain the endpoints of `n_samples` burst simulations for `n_anchor` anchor points,
-and have the shape `(d, n_samples, n_anchors)`.
 The distance between transition densities ``p_x`` and ``p_y`` for each pair of anchor points ``x`` and ``y``
-is estimated from the `data` using the specified algorithm `alg`.
+is estimated using the specified algorithm `alg`,
+using the data in the given [`TransitionDistanceProblem`](@ref) `prob`.
 
 The result `res` contains the pairwise distance matrix `res.distances`
 and the `res.info` dictionary, which is used to store further information,
 see the documentation for each specific algorithm.
 """
 function compute_distances(
-    data::AbstractArray{<:Real,3},
+    prob::TransitionDistanceProblem,
     alg::AbstractTransitionDistanceAlgorithm;
     progress::Bool=false,
 )::TransitionDistanceResult
@@ -152,8 +151,35 @@ function compute_distances(
 end
 
 """
-    EmbeddingResult{T<:Real}
+    compute_distances(data, alg::AbstractTransitionDistanceAlgorithm; weights=nothing, progress=false) -> TransitionDistanceResult
 
+The `data`, and optionally `weights`, can be provided directly instead of a [`TransitionDistanceProblem`](@ref).
+
+The `data` contains burst simulation samples for `n_anchor` anchor points,
+and can be in one of two layouts.
+
+In the `Contiguous` layout, the `data` is an `Array{T,3}`, i.e.,
+the number of samples `n_samples` is equal for each anchor,
+and the `data` has the shape `(d, n_samples, n_anchors)`.
+
+In the `Jagged` layout, the `data` is an `Vector{Array{T,2}}`, i.e.,
+each anchor may have a different number of samples,
+it is `length(data) = n_anchors`, and `size(data[i]) = (d, n_samples_i)`.
+
+The `weights` give each sample in `data` a weight.
+Thus, the layout and shape of `weights` has to exactly match the `data`.
+"""
+function compute_distances(
+    data::Union{ContiguousData{T},JaggedData{T}},
+    alg::AbstractTransitionDistanceAlgorithm;
+    weights::Union{ContiguousData{W},JaggedData{W},Nothing}=nothing,
+    kwargs...,
+)::TransitionDistanceResult where {T<:Real,W<:Real}
+    prob = TransitionDistanceProblem(data, weights)
+    compute_distances(prob, alg; kwargs...)
+end
+
+"""
 Struct for storing the result of the embedding computation,
 see [`compute_embedding`](@ref).
 """
@@ -196,23 +222,20 @@ compute_embedding(
 ) = compute_embedding(dres.distances, alg; kwargs...)
 
 """
-    compute_transition_manifold(data::AbstractArray{<:Real,3}, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; n_coordinates, progress::Bool=false) -> Tuple{TransitionDistanceResult,EmbeddingResult}
+    compute_transition_manifold(prob::TransitionDistanceProblem, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; n_coordinates, progress::Bool=false) -> Tuple{TransitionDistanceResult,EmbeddingResult}
 
 Compute an embedding using the `embedding_alg` from the transition distances that are calculated using the `distance_alg`.
 
 This is an auxiliary function that simply first calls [`compute_distances`](@ref) and then [`compute_embedding`](@ref).
-
-The `data` should contain the endpoints of `n_samples` burst simulations for `n_anchor` anchor points,
-and have the shape `(d, n_samples, n_anchors)`.
 """
 function compute_transition_manifold(
-    data::AbstractArray{<:Real,3},
+    prob::TransitionDistanceProblem,
     distance_alg::AbstractTransitionDistanceAlgorithm,
     embedding_alg::AbstractEmbeddingAlgorithm;
     n_coordinates::Int=typemax(Int),
     progress::Bool=false,
 )::Tuple{TransitionDistanceResult,EmbeddingResult}
-    dres = compute_distances(data, distance_alg; progress=progress)
+    dres = compute_distances(prob, distance_alg; progress=progress)
     eres = compute_embedding(
         dres, embedding_alg; n_coordinates=n_coordinates, progress=progress
     )
@@ -220,12 +243,32 @@ function compute_transition_manifold(
 end
 
 """
-    PreprocessResult{T<:Real}
+    compute_transition_manifold(data, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; weights=nothing, kwargs...) -> Tuple{TransitionDistanceResult,EmbeddingResult}
+
+The `data`, and optionally `weights`, can be provided directly instead of a [`TransitionDistanceProblem`](@ref), see also [`compute_distances`](@ref).
+"""
+function compute_transition_manifold(
+    data::Union{ContiguousData{T},JaggedData{T}},
+    distance_alg::AbstractTransitionDistanceAlgorithm,
+    embedding_alg::AbstractEmbeddingAlgorithm;
+    weights::Union{ContiguousData{W},JaggedData{W},Nothing}=nothing,
+    n_coordinates::Int=typemax(Int),
+    progress::Bool=false,
+)::Tuple{TransitionDistanceResult,EmbeddingResult} where {T<:Real,W<:Real}
+    dres = compute_distances(data, distance_alg; weights=weights, progress=progress)
+    eres = compute_embedding(
+        dres, embedding_alg; n_coordinates=n_coordinates, progress=progress
+    )
+    return (dres, eres)
+end
+
+"""
+    PreprocessResult
 
 Struct for storing the result of [`preprocess`](@ref).
 """
-struct PreprocessResult{T<:Real}
-    data::Array{T,3}
+struct PreprocessResult
+    prob::TransitionDistanceProblem
     info::Dict{String,<:Any}
 end
 
@@ -234,7 +277,7 @@ end
 
 Preprocess `data` so that it can be used in [`compute_distances`](@ref), returning a [`PreprocessResult`](@ref) object `res`.
 
-The result `res` contains the preprocessed data at `res.data`, and the `res.info` dictionary,
+The result `res` contains a [`TransitionDistanceProblem`](@ref) at `res.prob`, and the `res.info` dictionary,
 which is used to store further information.
 
 See the methods below associated to different data types.
@@ -246,20 +289,20 @@ end
 """
     compute_distances(pres::PreprocessResult, alg::AbstractTransitionDistanceAlgorithm; kwargs...) -> TransitionDistanceResult
 
-A [`PreprocessResult`](@ref) `pres` can be provided instead of the `data` array.
+A [`PreprocessResult`](@ref) `pres` can be provided directly instead of a [`TransitionDistanceProblem`](@ref).
 """
 compute_distances(
     pres::PreprocessResult, alg::AbstractTransitionDistanceAlgorithm; kwargs...
-) = compute_distances(pres.data, alg; kwargs...)
+) = compute_distances(pres.prob, alg; kwargs...)
 
 """
     compute_transition_manifold(pres::PreprocessResult, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; kwargs...) -> Tuple{TransitionDistanceResult,EmbeddingResult}
 
-A [`PreprocessResult`](@ref) `pres` can be provided instead of the `data` array.
+A [`PreprocessResult`](@ref) `pres` can be provided directly instead of a [`TransitionDistanceProblem`](@ref).
 """
 compute_transition_manifold(
     pres::PreprocessResult,
     distance_alg::AbstractTransitionDistanceAlgorithm,
     embedding_alg::AbstractEmbeddingAlgorithm;
     kwargs...,
-) = compute_transition_manifold(pres.data, distance_alg, embedding_alg; kwargs...)
+) = compute_transition_manifold(pres.prob, distance_alg, embedding_alg; kwargs...)
