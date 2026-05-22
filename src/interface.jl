@@ -19,14 +19,37 @@ abstract type AbstractEmbeddingAlgorithm end
 const ContiguousData{T<:Real} = Array{T,3}
 const JaggedData{T<:Real} = Vector{Array{T,2}}
 
-abstract type DataLayout end
-struct Contiguous <: DataLayout end
-struct Jagged <: DataLayout end
+"""
+    AbstractDataLayout
+
+Abstract type for the layout of data.
+
+See also [`TransitionDistanceProblem`](@ref) and [`compute_distances`](@ref).
+"""
+abstract type AbstractDataLayout end
+
+"""
+    Contiguous <: AbstractDataLayout
+
+Contiguous data layout `Array{T, 3}`.
+
+See also [`TransitionDistanceProblem`](@ref) and [`compute_distances`](@ref).
+"""
+struct Contiguous <: AbstractDataLayout end
+
+"""
+    Jagged <: AbstractDataLayout
+
+Jagged data layout `Vector{Array{T,2}}`.
+
+See also [`TransitionDistanceProblem`](@ref) and [`compute_distances`](@ref).
+"""
+struct Jagged <: AbstractDataLayout end
 
 """
     TransitionDistanceProblem{T,W,L}(data; weights)
 
-Struct for the `data` that is used to compute transition distances,
+Struct for holding the data that is used to compute transition distances,
 see [`compute_distances`](@ref).
 
 The `data` contains burst simulation samples for `n_anchor` anchor points,
@@ -46,7 +69,7 @@ Thus, the layout and shape of `weights` has to exactly match the `data`.
 The type of data points is `T<:Real`, and the type of the weights is `W<:Real`
 if weights were provided and `W=Nothing` otherwise.
 """
-struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:DataLayout}
+struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataLayout}
     data::Union{ContiguousData{T},JaggedData{T}}
     weights::Union{ContiguousData{W},JaggedData{W},Nothing}
 
