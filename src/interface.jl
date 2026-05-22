@@ -89,7 +89,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
         end
 
         if isnothing(weights)
-            return new{T,Nothing,L}(data, nothing)
+            return new{T,Nothing,L}(data, weights)
         end
 
         if (weights isa ContiguousData) != (data isa ContiguousData)
@@ -99,7 +99,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
         if L === Contiguous
             size(data) == size(weights) ||
                 throw(ArgumentError("shapes of data and weights do not match"))
-            return new{T,W,L}(data, nothing)
+            return new{T,W,L}(data, weights)
         end
 
         # L === Jagged
@@ -112,7 +112,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
             size(x) == size(y) ||
                 throw(ArgumentError("shapes of data and weights do not match"))
         end
-        return new{T,W,L}(data, nothing)
+        return new{T,W,L}(data, weights)
     end
 end
 
