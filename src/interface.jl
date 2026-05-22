@@ -16,8 +16,8 @@ See also [`compute_embedding`](@ref).
 """
 abstract type AbstractEmbeddingAlgorithm end
 
-const ContiguousData{T<:Real} = Array{T,3}
-const JaggedData{T<:Real} = Vector{Array{T,2}}
+const ContiguousData{T<:Real} = AbstractArray{T,3}
+const JaggedData{T<:Real} = AbstractVector{<:AbstractArray{T,2}}
 
 """
     AbstractDataLayout
