@@ -21,7 +21,7 @@ struct KernelDStatMMD{T} <: AbstractTransitionDistanceAlgorithm
     kernel::T
 end
 
-function compute_distances(::AbstractArray{<:Real,3}, ::KernelDStatMMD; kwargs...)
+function compute_distances(::TransitionDistanceProblem, ::KernelDStatMMD; kwargs...)
     error(
         "Import the `KernelFunctions` package and provide a `kernel <: Kernel`: `KernelDStatMMD(kernel)`",
     )
@@ -49,7 +49,7 @@ struct KernelVStatMMD{T} <: AbstractTransitionDistanceAlgorithm
     kernel::T
 end
 
-function compute_distances(::AbstractArray{<:Real,3}, ::KernelVStatMMD; kwargs...)
+function compute_distances(::TransitionDistanceProblem, ::KernelVStatMMD; kwargs...)
     error(
         "Import the `KernelFunctions` package and provide a `kernel <: Kernel`: `KernelVStatMMD(kernel)`",
     )
