@@ -50,7 +50,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:DataLayout}
     data::Union{ContiguousData{T},JaggedData{T}}
     weights::Union{ContiguousData{W},JaggedData{W},Nothing}
 
-    function Problem(
+    function TransitionDistanceProblem(
         data::Union{ContiguousData{T},JaggedData{T}},
         weights::Union{ContiguousData{W},JaggedData{W},Nothing},
     ) where {T<:Real,W<:Real}
