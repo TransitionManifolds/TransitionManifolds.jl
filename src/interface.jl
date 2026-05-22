@@ -143,11 +143,18 @@ and the `res.info` dictionary, which is used to store further information,
 see the documentation for each specific algorithm.
 """
 function compute_distances(
-    prob::TransitionDistanceProblem,
+    prob::TransitionDistanceProblem{T,W,L},
     alg::AbstractTransitionDistanceAlgorithm;
     progress::Bool=false,
-)::TransitionDistanceResult
-    error("No implementation of `compute_distances` for algorithm `$(typeof(alg))`")
+)::TransitionDistanceResult where {T,W,L}
+    if W === Nothing
+        error(
+            "No implementation of `compute_distances` for algorithm `$(typeof(alg))` and data layout `$L`",
+        )
+    end
+    error(
+        "No implementation of `compute_distances` for algorithm `$(typeof(alg))`, data layout `$L`, and weighted samples",
+    )
 end
 
 """
