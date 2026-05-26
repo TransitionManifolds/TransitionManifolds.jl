@@ -187,6 +187,8 @@ function compute_distances(
 end
 
 """
+    EmbeddingResult{T<:Real}
+
 Struct for storing the result of the embedding computation,
 see [`compute_embedding`](@ref).
 """
