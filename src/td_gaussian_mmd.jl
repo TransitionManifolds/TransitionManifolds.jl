@@ -73,8 +73,8 @@ function compute_distances(
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
     # TODO: also accept Jagged problems.
 
-    # TODO: Also accept weighted problems, ignore weights, and emit warning.
     data = prob.data
+
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
         n_sub_sample = min(size(data, 2) * size(data, 3), 100) # 100 random points if possible
