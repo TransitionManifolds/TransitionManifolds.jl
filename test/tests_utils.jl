@@ -1,3 +1,29 @@
+@testset "convert_contiguous_to_jagged" begin
+    x = rand(Int32, 2, 3, 4)
+    w = rand(2, 3, 4)
+
+    @testset "no weights" begin
+        p = TransitionDistanceProblem(x)
+        p_j = TransitionManifolds.convert_contiguous_to_jagged(p)
+
+        @test p_j isa TransitionDistanceProblem{Int32,Nothing,Jagged}
+        for i in 1:4
+            @test p.data[:, :, i] == p_j.data[i]
+        end
+    end
+
+    @testset "weights" begin
+        p = TransitionDistanceProblem(x, w)
+        p_j = TransitionManifolds.convert_contiguous_to_jagged(p)
+
+        @test p_j isa TransitionDistanceProblem{Int32,Float64,Jagged}
+        for i in 1:4
+            @test p.data[:, :, i] == p_j.data[i]
+            @test p.weights[:, :, i] == p_j.weights[i]
+        end
+    end
+end
+
 @testset "convert_kernel_to_distance_matrix" begin
     # Dij = Kii + Kjj - 2Kij.
     # K is assmumed to be symmetric and only the upper triangular is used

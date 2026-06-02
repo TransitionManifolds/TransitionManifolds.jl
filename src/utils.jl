@@ -1,3 +1,12 @@
+# Convert a TransitionDistanceProblem from contiguous to jagged layout using slices.
+function convert_contiguous_to_jagged(
+    prob::TransitionDistanceProblem{T,W,Contiguous}
+)::TransitionDistanceProblem{T,W,Jagged} where {T,W}
+    data = eachslice(prob.data; dims=3)
+    weights = (W === Nothing) ? nothing : eachslice(prob.weights; dims=3)
+    return TransitionDistanceProblem(data, weights)
+end
+
 """
     convert_kernel_to_distance_matrix!(K::AbstractMatrix)
 
