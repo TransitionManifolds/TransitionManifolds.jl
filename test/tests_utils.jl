@@ -34,6 +34,20 @@ end
     @test K == D
 end
 
+@testset "subsamples_from_jagged" begin
+    @testset "sufficient data" begin
+        data = [rand(3, 6), rand(3, 4)]
+        subsamples = TransitionManifolds.subsamples_from_jagged(data, 4)
+        @test size(subsamples) == (3, 4)
+    end
+
+    @testset "insufficient data" begin
+        data = [rand(3, 2), rand(3, 3)]
+        subsamples = TransitionManifolds.subsamples_from_jagged(data, 10)
+        @test size(subsamples) == (3, 5)
+    end
+end
+
 @testset "tune_bandwidth_gaussian" begin
     quant = 0.95
     val_at_quant = 0.01

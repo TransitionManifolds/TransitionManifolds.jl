@@ -33,6 +33,25 @@ function convert_kernel_to_distance_matrix!(K::AbstractMatrix{T}) where {T<:Real
 end
 
 """
+    subsamples_from_jagged(data::Vector{Matrix}, n_samples) -> Matrix
+
+Generate `n_samples` random samples from jagged `data`.
+
+The output is a `(d, n_samples)` matrix of column views.
+If there are less than `n_samples` data points in `data`, the output will
+contain only all data points, i.e., will have less than `n_samples` columns.
+"""
+function subsamples_from_jagged(
+    data::JaggedData{T}, n_samples::Int
+)::AbstractArray{T,2} where {T}
+    # create a vector of column views containing all data points
+    all_cols = mapreduce(eachcol, vcat, data)
+
+    n_samples = min(n_samples, length(all_cols))
+    return stack(sample(all_cols, n_samples; replace=false))
+end
+
+"""
     tune_bandwidth_gaussian(data::AbstractMatrix{<:Real}; quant=0.95, val_at_quant=0.01)
 
 Return the bandwidth ``σ`` of the gaussian kernel
