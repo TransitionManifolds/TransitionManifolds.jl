@@ -1,6 +1,6 @@
 @testset "convert_contiguous_to_jagged" begin
     x = rand(Int32, 2, 3, 4)
-    w = rand(2, 3, 4)
+    w = rand(3, 4)
 
     @testset "no weights" begin
         p = TransitionDistanceProblem(x)
@@ -19,7 +19,7 @@
         @test p_j isa TransitionDistanceProblem{Int32,Float64,Jagged}
         for i in 1:4
             @test p.data[:, :, i] == p_j.data[i]
-            @test p.weights[:, :, i] == p_j.weights[i]
+            @test p.weights[:, i] == p_j.weights[i]
         end
     end
 end

@@ -3,7 +3,7 @@ function convert_contiguous_to_jagged(
     prob::TransitionDistanceProblem{T,W,Contiguous}
 )::TransitionDistanceProblem{T,W,Jagged} where {T,W}
     data = eachslice(prob.data; dims=3)
-    weights = (W === Nothing) ? nothing : eachslice(prob.weights; dims=3)
+    weights = (W === Nothing) ? nothing : eachslice(prob.weights; dims=2)
     return TransitionDistanceProblem(data, weights)
 end
 
