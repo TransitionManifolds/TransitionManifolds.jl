@@ -11,7 +11,8 @@ using StatsBase: mean
 """
     compute_distances(prob, alg::KernelDStatMMD; kwargs...) -> TransitionDistanceResult
 
-When using the [`KernelDStatMMD`](@ref) algorithm, the `res.info` dictionary contains
+The [`KernelDStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Weighted samples are not supported.
+The `res.info` dictionary contains
 
   - `res.info["elapsed"]`: the elapsed time
 """
