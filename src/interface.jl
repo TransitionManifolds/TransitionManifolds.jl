@@ -177,11 +177,11 @@ The `data`, and optionally `weights`, can be provided directly instead of a [`Tr
 The `data` contains burst simulation samples for `n_anchor` anchor points,
 and can be in one of two layouts.
 
-In the `Contiguous` layout, the `data` is an `Array{T,3}`, i.e.,
+In the [`Contiguous`](@ref) layout, the `data` is an `Array{T,3}`, i.e.,
 the number of samples `n_samples` is equal for each anchor,
 and the `data` has the shape `(d, n_samples, n_anchors)`.
 
-In the `Jagged` layout, the `data` is an `Vector{Array{T,2}}`, i.e.,
+In the [`Jagged`](@ref) layout, the `data` is an `Vector{Array{T,2}}`, i.e.,
 each anchor may have a different number of samples,
 it is `length(data) = n_anchors`, and `size(data[i]) = (d, n_samples_i)`.
 

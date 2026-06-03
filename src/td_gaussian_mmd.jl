@@ -58,6 +58,15 @@ struct GaussianDStatMMD <: AbstractTransitionDistanceAlgorithm
 end
 GaussianDStatMMD(; bandwidth=nothing) = GaussianDStatMMD(bandwidth)
 
+"""
+    compute_distances(prob, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceResult
+
+The [`GaussianDStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Weighted samples are not supported.
+The `res.info` dictionary contains
+
+  - `res.info["elapsed"]`: the elapsed time
+  - `res.info["bandwidth"]`: the used bandwidth
+"""
 function compute_distances(
     prob::TransitionDistanceProblem{T,Nothing,Jagged},
     alg::GaussianDStatMMD;
@@ -88,6 +97,13 @@ function compute_distances(
     return compute_distances(prob, alg; kwargs...)
 end
 
+# This implementation converts Contiguous to Jagged layout. Jagged is handled above.
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,Contiguous}, alg::GaussianDStatMMD; kwargs...
+)::TransitionDistanceResult where {T<:Real}
+    return compute_distances(convert_contiguous_to_jagged(prob), alg; kwargs...)
+end
+
 # Compute the matrix K with K_ij := E[k(x[i], x[j])].
 # Since K is symmetric, the entries below the diagonal
 # are not filled in and left to be 0.
@@ -111,77 +127,6 @@ function compute_kernel_matrix(
     Threads.@threads for i in eachindex(data)
         for j in 1:(i - 1)
             K[j, i] = kernel_eval(data[j], data[i], alg)
-        end
-        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
-    end
-
-    return K
-end
-
-"""
-    compute_distances(prob, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceResult
-
-When using the [`GaussianDStatMMD`](@ref) algorithm, the `res.info` dictionary contains
-
-  - `res.info["elapsed"]`: the elapsed time
-  - `res.info["bandwidth"]`: the used bandwidth
-"""
-function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,Contiguous},
-    alg::GaussianDStatMMD;
-    progress::Bool=false,
-)::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    # TODO: also accept Jagged problems.
-
-    data = prob.data
-
-    # automatic bandwidth selection
-    if isnothing(alg.bandwidth)
-        n_sub_sample = min(size(data, 2) * size(data, 3), 100) # 100 random points if possible
-        subset = stack(sample(eachslice(data; dims=(2, 3)), n_sub_sample; replace=false))
-        bandwidth = tune_bandwidth_gaussian(subset)
-        alg = GaussianDStatMMD(bandwidth)
-    end
-
-    t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
-    t2 = @elapsed convert_kernel_to_distance_matrix!(D)
-    return TransitionDistanceResult(
-        D, Dict("bandwidth" => alg.bandwidth, "elapsed" => t1 + t2)
-    )
-end
-
-# This implementation casts integers to Float32. Floats are handled above.
-function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,Contiguous}, alg::GaussianDStatMMD; kwargs...
-)::TransitionDistanceResult where {T<:Real}
-    @info "Casting data from $T to Float32 for distance computation"
-    prob = TransitionDistanceProblem(Float32.(prob.data))
-    return compute_distances(prob, alg; kwargs...)
-end
-
-# Compute the matrix K with K_ij := E[k(x[i], x[j])].
-# Since K is symmetric, the entries below the diagonal
-# are not filled in and left to be 0.
-function compute_kernel_matrix(
-    data::AbstractArray{T,3}, alg::GaussianDStatMMD; progress::Bool=false
-)::Matrix{T} where {T<:AbstractFloat}
-    n = size(data, 3)
-    K = zeros(T, n, n)
-    pbar = Progress(
-        binomial(n, 2) + 1;
-        enabled=progress,
-        showspeed=true,
-        desc="Computing Distance Matrix:",
-    )
-
-    Threads.@threads for i in axes(data, 3)
-        @views K[i, i] = kernel_eval(data[:, :, i], alg)
-    end
-    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
-
-    Threads.@threads for i in axes(data, 3)
-        for j in 1:(i - 1)
-            @views K[j, i] = kernel_eval(data[:, :, j], data[:, :, i], alg)
         end
         next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
     end
