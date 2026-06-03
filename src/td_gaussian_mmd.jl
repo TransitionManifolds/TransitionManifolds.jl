@@ -58,6 +58,66 @@ struct GaussianDStatMMD <: AbstractTransitionDistanceAlgorithm
 end
 GaussianDStatMMD(; bandwidth=nothing) = GaussianDStatMMD(bandwidth)
 
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,Jagged},
+    alg::GaussianDStatMMD;
+    progress::Bool=false,
+)::TransitionDistanceResult{T} where {T<:AbstractFloat}
+    data = prob.data
+
+    # automatic bandwidth selection
+    if isnothing(alg.bandwidth)
+        subsamples = subsamples_from_jagged(data, 100)
+        bandwidth = tune_bandwidth_gaussian(subsamples)
+        alg = GaussianDStatMMD(bandwidth)
+    end
+
+    t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
+    t2 = @elapsed convert_kernel_to_distance_matrix!(D)
+    return TransitionDistanceResult(
+        D, Dict("bandwidth" => alg.bandwidth, "elapsed" => t1 + t2)
+    )
+end
+
+# This implementation casts integers to Float32. Floats are handled above.
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,Jagged}, alg::GaussianDStatMMD; kwargs...
+)::TransitionDistanceResult where {T<:Real}
+    @info "Casting data from $T to Float32 for distance computation"
+    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
+    return compute_distances(prob, alg; kwargs...)
+end
+
+# Compute the matrix K with K_ij := E[k(x[i], x[j])].
+# Since K is symmetric, the entries below the diagonal
+# are not filled in and left to be 0.
+function compute_kernel_matrix(
+    data::JaggedData{T}, alg::GaussianDStatMMD; progress::Bool=false
+)::Matrix{T} where {T<:AbstractFloat}
+    n = length(data)
+    K = zeros(T, n, n)
+    pbar = Progress(
+        binomial(n, 2) + 1;
+        enabled=progress,
+        showspeed=true,
+        desc="Computing Distance Matrix:",
+    )
+
+    Threads.@threads for i in eachindex(data)
+        K[i, i] = kernel_eval(data[i], alg)
+    end
+    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+
+    Threads.@threads for i in eachindex(data)
+        for j in 1:(i - 1)
+            K[j, i] = kernel_eval(data[j], data[i], alg)
+        end
+        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+    end
+
+    return K
+end
+
 """
     compute_distances(prob, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceResult
 

@@ -51,26 +51,37 @@
         @testset "output" begin
             alg = GaussianDStatMMD(0.123)
             x = rand(Float64, 2, 4, 3)
+            x_j = [rand(2, 4), rand(2, 3), rand(2, 2)]
             prob = TransitionDistanceProblem(x)
-            res = compute_distances(prob, alg)
+            prob_j = TransitionDistanceProblem(x_j)
 
-            @test size(res.distances) == (3, 3)
-            @test issymmetric(res.distances)
-            @test all(diag(res.distances) .== 0)
+            @testset "$(layout(p))" for p in [prob, prob_j]
+                res = compute_distances(p, alg)
 
-            @test res.info["bandwidth"] == 0.123
-            @test res.info["elapsed"] > 0
+                @test size(res.distances) == (3, 3)
+                @test issymmetric(res.distances)
+                @test all(diag(res.distances) .== 0)
+
+                @test res.info["bandwidth"] == 0.123
+                @test res.info["elapsed"] > 0
+            end
         end
 
         @testset "types" begin
             alg = GaussianDStatMMD(1)
-            x64 = rand(Float64, 2, 4, 3)
-            x32 = rand(Float32, 2, 4, 3)
-            x16 = rand(Float16, 2, 4, 3)
+            types = [Float64, Float32, Float16]
 
-            @test typeof(compute_distances(x64, alg).distances) == Array{Float64,2}
-            @test typeof(compute_distances(x32, alg).distances) == Array{Float32,2}
-            @test typeof(compute_distances(x16, alg).distances) == Array{Float16,2}
+            @testset "$t" for t in types
+                @testset "Contiguous" begin
+                    x = rand(t, 2, 4, 3)
+                    @test typeof(compute_distances(x, alg).distances) == Array{t,2}
+                end
+
+                @testset "Jagged" begin
+                    x = [rand(t, 2, 4), rand(t, 2, 3), rand(t, 2, 2)]
+                    @test typeof(compute_distances(x, alg).distances) == Array{t,2}
+                end
+            end
         end
 
         @testset "cast" begin
@@ -78,9 +89,17 @@
             types = [Int64, Int32, UInt32]
 
             @testset "$t" for t in types
-                x = rand(t, 2, 4, 3)
-                res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
-                @test typeof(res.distances) == Array{Float32,2}
+                @testset "Contiguous" begin
+                    x = rand(t, 2, 4, 3)
+                    res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
+                    @test typeof(res.distances) == Array{Float32,2}
+                end
+
+                @testset "Jagged" begin
+                    x = [rand(t, 2, 4), rand(t, 2, 3), rand(t, 2, 2)]
+                    res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
+                    @test typeof(res.distances) == Array{Float32,2}
+                end
             end
         end
 
@@ -97,10 +116,19 @@
         end
 
         @testset "automatic bandwidth" begin
-            alg = GaussianDStatMMD()
-            x = rand(Float64, 2, 100, 3)
-            res = compute_distances(x, alg)
-            @test res.info["bandwidth"] > 0
+            @testset "Contiguous" begin
+                alg = GaussianDStatMMD()
+                x = rand(Float64, 2, 100, 3)
+                res = compute_distances(x, alg)
+                @test res.info["bandwidth"] > 0
+            end
+
+            @testset "Jagged" begin
+                alg = GaussianDStatMMD()
+                x = [rand(2, 100), rand(2, 200), rand(2, 50)]
+                res = compute_distances(x, alg)
+                @test res.info["bandwidth"] > 0
+            end
         end
     end
 end
