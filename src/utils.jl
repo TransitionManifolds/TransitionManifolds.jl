@@ -22,7 +22,7 @@ function compute_kernel_matrix(
     n = length(data)
     K = zeros(T, n, n)
     pbar = Progress(
-        binomial(n, 2) + 1;
+        binomial(n, 2) + n;
         enabled=progress,
         showspeed=true,
         desc="Computing Kernel Matrix:",
