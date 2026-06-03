@@ -104,36 +104,6 @@ function compute_distances(
     return compute_distances(convert_contiguous_to_jagged(prob), alg; kwargs...)
 end
 
-# Compute the matrix K with K_ij := E[k(x[i], x[j])].
-# Since K is symmetric, the entries below the diagonal
-# are not filled in and left to be 0.
-function compute_kernel_matrix(
-    data::JaggedData{T}, alg::GaussianDStatMMD; progress::Bool=false
-)::Matrix{T} where {T<:AbstractFloat}
-    n = length(data)
-    K = zeros(T, n, n)
-    pbar = Progress(
-        binomial(n, 2) + 1;
-        enabled=progress,
-        showspeed=true,
-        desc="Computing Distance Matrix:",
-    )
-
-    Threads.@threads for i in eachindex(data)
-        K[i, i] = kernel_eval(data[i], alg)
-    end
-    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
-
-    Threads.@threads for i in eachindex(data)
-        for j in 1:(i - 1)
-            K[j, i] = kernel_eval(data[j], data[i], alg)
-        end
-        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
-    end
-
-    return K
-end
-
 # Estimate E[k(X, Y)] from samples x and y.
 # x has shape (d, n) and y has shape (d, m).
 function kernel_eval(

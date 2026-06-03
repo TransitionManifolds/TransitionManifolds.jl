@@ -8,6 +8,42 @@ function convert_contiguous_to_jagged(
 end
 
 """
+    compute_kernel_matrix(data::JaggedData{T}, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> Matrix{T}
+
+Compute the kernel matrix ``K`` with ``K_{ij} := E[k(x[i], x[j])]``.
+
+Since K is symmetric, the entries below the diagonal are not filled in and left to be 0.
+
+For the given `alg`, the methods `kernel_eval(x, alg)` and `kernel_eval(x, y, alg)` have to be implemented.
+"""
+function compute_kernel_matrix(
+    data::JaggedData{T}, alg::AbstractTransitionDistanceAlgorithm; progress::Bool=false
+)::Matrix{T} where {T<:AbstractFloat}
+    n = length(data)
+    K = zeros(T, n, n)
+    pbar = Progress(
+        binomial(n, 2) + 1;
+        enabled=progress,
+        showspeed=true,
+        desc="Computing Kernel Matrix:",
+    )
+
+    Threads.@threads for i in eachindex(data)
+        K[i, i] = kernel_eval(data[i], alg)
+    end
+    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+
+    Threads.@threads for i in eachindex(data)
+        for j in 1:(i - 1)
+            K[j, i] = kernel_eval(data[j], data[i], alg)
+        end
+        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+    end
+
+    return K
+end
+
+"""
     convert_kernel_to_distance_matrix!(K::AbstractMatrix)
 
 Convert a kernel matrix `K` to a distance matrix `D` in place:
