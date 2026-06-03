@@ -19,6 +19,9 @@ abstract type AbstractEmbeddingAlgorithm end
 const ContiguousData{T<:Real} = AbstractArray{T,3}
 const JaggedData{T<:Real} = AbstractVector{<:AbstractArray{T,2}}
 
+const ContiguousWeights{W<:Real} = AbstractArray{W,2}
+const JaggedWeights{W<:Real} = AbstractVector{<:AbstractVector{W}}
+
 """
     AbstractDataLayout
 
@@ -64,18 +67,20 @@ each anchor may have a different number of samples,
 it is `length(data) = n_anchors`, and `size(data[i]) = (d, n_samples_i)`.
 
 Optionally, `weights` can be specified that give each sample in `data` a weight.
-Thus, the layout and shape of `weights` has to exactly match the `data`.
+Thus, the layout and shape of `weights` has to match the `data`:
+In the `L=Contiguous` layout, the `weights` are an `Array{W,2}` of shape `(n_samples, n_anchors)`,
+and in the `L=Jagged` layout, the `weights` are a `Vector{Vector{W}}` of length `n_anchors`.
 
 The type of data points is `T<:Real`, and the type of the weights is `W<:Real`
 if weights were provided and `W=Nothing` otherwise.
 """
 struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataLayout}
     data::Union{ContiguousData{T},JaggedData{T}}
-    weights::Union{ContiguousData{W},JaggedData{W},Nothing}
+    weights::Union{ContiguousWeights{W},JaggedWeights{W},Nothing}
 
     function TransitionDistanceProblem(
         data::Union{ContiguousData{T},JaggedData{T}},
-        weights::Union{ContiguousData{W},JaggedData{W},Nothing},
+        weights::Union{ContiguousWeights{W},JaggedWeights{W},Nothing},
     ) where {T<:Real,W<:Real}
         L = data isa ContiguousData ? Contiguous : Jagged
 
@@ -92,13 +97,12 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
             return new{T,Nothing,L}(data, weights)
         end
 
-        if (weights isa ContiguousData) != (data isa ContiguousData)
+        if (weights isa ContiguousWeights) != (data isa ContiguousData)
             throw(ArgumentError("mixed layouts of data and weights"))
         end
 
         if L === Contiguous
-            #FIXME: I though there is a weight per sample. It says this in the docstring...
-            size(data) == size(weights) ||
+            size(data)[2:3] == size(weights) ||
                 throw(ArgumentError("shapes of data and weights do not match"))
             return new{T,W,L}(data, weights)
         end
@@ -110,7 +114,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
 
         # check same sample sizes
         for (x, y) in zip(data, weights)
-            size(x) == size(y) ||
+            size(x, 2) == length(y) ||
                 throw(ArgumentError("shapes of data and weights do not match"))
         end
         return new{T,W,L}(data, weights)
@@ -158,7 +162,6 @@ function compute_distances(
     )
 end
 
-#FIXME: Should the weights be per sample or per data 'observation?' i.e. each graph?
 """
     compute_distances(data, alg::AbstractTransitionDistanceAlgorithm; weights=nothing, progress=false) -> TransitionDistanceResult
 
@@ -176,12 +179,14 @@ each anchor may have a different number of samples,
 it is `length(data) = n_anchors`, and `size(data[i]) = (d, n_samples_i)`.
 
 The `weights` give each sample in `data` a weight.
-Thus, the layout and shape of `weights` has to exactly match the `data`.
+Thus, the layout and shape of `weights` has to match the `data`:
+In the `L=Contiguous` layout, the `weights` are an `Array{W,2}` of shape `(n_samples, n_anchors)`,
+and in the `L=Jagged` layout, the `weights` are a `Vector{Vector{W}}` of length `n_anchors`.
 """
 function compute_distances(
     data::Union{ContiguousData{T},JaggedData{T}},
     alg::AbstractTransitionDistanceAlgorithm;
-    weights::Union{ContiguousData{W},JaggedData{W},Nothing}=nothing,
+    weights::Union{ContiguousWeights{W},JaggedWeights{W},Nothing}=nothing,
     kwargs...,
 )::TransitionDistanceResult where {T<:Real,W<:Real}
     prob = TransitionDistanceProblem(data, weights)
@@ -262,7 +267,7 @@ function compute_transition_manifold(
     data::Union{ContiguousData{T},JaggedData{T}},
     distance_alg::AbstractTransitionDistanceAlgorithm,
     embedding_alg::AbstractEmbeddingAlgorithm;
-    weights::Union{ContiguousData{W},JaggedData{W},Nothing}=nothing,
+    weights::Union{ContiguousWeights{W},JaggedWeights{W},Nothing}=nothing,
     n_coordinates::Int=typemax(Int),
     progress::Bool=false,
 )::Tuple{TransitionDistanceResult,EmbeddingResult} where {T<:Real,W<:Real}
