@@ -16,7 +16,8 @@ using KernelFunctions
         @testset "output" begin
             alg = KernelVStatMMD(kernel)
             x = rand(Float64, 2, 4, 3)
-            res = compute_distances(x, alg)
+            prob = TransitionDistanceProblem(x)
+            res = compute_distances(prob, alg)
 
             @test size(res.distances) == (3, 3)
             @test issymmetric(res.distances)
@@ -79,7 +80,8 @@ end
         @testset "output" begin
             alg = KernelDStatMMD(kernel)
             x = rand(Float64, 2, 4, 3)
-            res = compute_distances(x, alg)
+            prob = TransitionDistanceProblem(x)
+            res = compute_distances(prob, alg)
 
             @test size(res.distances) == (3, 3)
             @test issymmetric(res.distances)

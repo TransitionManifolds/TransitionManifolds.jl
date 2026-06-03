@@ -15,7 +15,7 @@ GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20
     GaussianVStatMMD(bandwidth, blocksize)
 
 function compute_distances(
-    data::AbstractArray{<:Real,3}, alg::GaussianVStatMMD; progress::Bool=false
+    prob::TransitionDistanceProblem, alg::GaussianVStatMMD; progress::Bool=false
 )::TransitionDistanceResult
     # TODO: implement!
 
@@ -59,7 +59,7 @@ end
 GaussianDStatMMD(; bandwidth=nothing) = GaussianDStatMMD(bandwidth)
 
 """
-    compute_distances(data, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceResult
+    compute_distances(prob, alg::GaussianDStatMMD; kwargs...) -> TransitionDistanceResult
 
 When using the [`GaussianDStatMMD`](@ref) algorithm, the `res.info` dictionary contains
 
@@ -67,8 +67,14 @@ When using the [`GaussianDStatMMD`](@ref) algorithm, the `res.info` dictionary c
   - `res.info["bandwidth"]`: the used bandwidth
 """
 function compute_distances(
-    data::AbstractArray{T,3}, alg::GaussianDStatMMD; progress::Bool=false
+    prob::TransitionDistanceProblem{T,Nothing,Contiguous},
+    alg::GaussianDStatMMD;
+    progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
+    # TODO: also accept Jagged problems.
+
+    data = prob.data
+
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
         n_sub_sample = min(size(data, 2) * size(data, 3), 100) # 100 random points if possible
@@ -86,10 +92,11 @@ end
 
 # This implementation casts integers to Float32. Floats are handled above.
 function compute_distances(
-    data::AbstractArray{T,3}, alg::GaussianDStatMMD; kwargs...
+    prob::TransitionDistanceProblem{T,Nothing,Contiguous}, alg::GaussianDStatMMD; kwargs...
 )::TransitionDistanceResult where {T<:Real}
     @info "Casting data from $T to Float32 for distance computation"
-    return compute_distances(Float32.(data), alg; kwargs...)
+    prob = TransitionDistanceProblem(Float32.(prob.data))
+    return compute_distances(prob, alg; kwargs...)
 end
 
 # Compute the matrix K with K_ij := E[k(x[i], x[j])].

@@ -37,7 +37,7 @@ function _preprocess_mode_adjacency_matrix(data::AbstractArray{<:Graph,2})::Prep
     for i in CartesianIndices(data)
         flat_lower_triangular!(view(out, :, i), data[i])
     end
-    return PreprocessResult(out, Dict{String,Any}())
+    return PreprocessResult(TransitionDistanceProblem(out), Dict{String,Any}())
 end
 
 function flat_lower_triangular!(flat_lt::AbstractVector, graph::Graph)

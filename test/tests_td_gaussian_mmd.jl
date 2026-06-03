@@ -51,7 +51,8 @@
         @testset "output" begin
             alg = GaussianDStatMMD(0.123)
             x = rand(Float64, 2, 4, 3)
-            res = compute_distances(x, alg)
+            prob = TransitionDistanceProblem(x)
+            res = compute_distances(prob, alg)
 
             @test size(res.distances) == (3, 3)
             @test issymmetric(res.distances)
