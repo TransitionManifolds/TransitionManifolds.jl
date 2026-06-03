@@ -16,61 +16,43 @@ When using the [`KernelDStatMMD`](@ref) algorithm, the `res.info` dictionary con
   - `res.info["elapsed"]`: the elapsed time
 """
 function TransitionManifolds.compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,Contiguous},
+    prob::TransitionDistanceProblem{T,Nothing,Jagged},
     alg::KernelDStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    # TODO: also accept `Jagged` layout
     !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
-    t1 = @elapsed D = compute_kernel_matrix(prob.data, alg; progress=progress)
+    t1 = @elapsed D = TransitionManifolds.compute_kernel_matrix(
+        prob.data, alg; progress=progress
+    )
     t2 = @elapsed TransitionManifolds.convert_kernel_to_distance_matrix!(D)
     return TransitionDistanceResult(D, Dict("elapsed" => t1 + t2))
 end
 
 # This implementation casts integers to Float32. Floats are handled above.
 function TransitionManifolds.compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,Contiguous},
+    prob::TransitionDistanceProblem{T,Nothing,Jagged},
     alg::KernelDStatMMD{<:Kernel};
     kwargs...,
 )::TransitionDistanceResult where {T<:Real}
     @info "Casting data from $T to Float32 for distance computation"
-    prob = TransitionDistanceProblem(Float32.(prob.data))
+    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
     return compute_distances(prob, alg; kwargs...)
 end
 
-# Compute the matrix K with K_ij := E[k(x[i], x[j])].
-# Since K is symmetric, the entries below the diagonal
-# are not filled in and left to be 0.
-function compute_kernel_matrix(
-    data::AbstractArray{T,3}, alg::KernelDStatMMD{<:Kernel}; progress::Bool=false
-)::Matrix{T} where {T<:AbstractFloat}
-    n = size(data, 3)
-    K = zeros(T, n, n)
-    pbar = Progress(
-        binomial(n, 2) + n;
-        enabled=progress,
-        showspeed=true,
-        desc="Computing Distance Matrix:",
+# This implementation converts Contiguous to Jagged layout. Jagged is handled above.
+function TransitionManifolds.compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,Contiguous},
+    alg::KernelDStatMMD{<:Kernel};
+    kwargs...,
+)::TransitionDistanceResult where {T<:Real}
+    return compute_distances(
+        TransitionManifolds.convert_contiguous_to_jagged(prob), alg; kwargs...
     )
-
-    Threads.@threads for i in axes(data, 3)
-        @views K[i, i] = kernel_eval(data[:, :, i], alg)
-    end
-    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
-
-    Threads.@threads for i in axes(data, 3)
-        for j in 1:(i - 1)
-            @views K[j, i] = kernel_eval(data[:, :, j], data[:, :, i], alg)
-        end
-        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
-    end
-
-    return K
 end
 
 # Estimate E[k(X, Y)] from samples x and y.
 # x has shape (d, n) and y has shape (d, m).
-function kernel_eval(
+function TransitionManifolds.kernel_eval(
     x::AbstractMatrix{T}, y::AbstractMatrix{T}, alg::KernelDStatMMD{<:Kernel}
 )::T where {T<:AbstractFloat}
     n = min(size(x, 2), size(y, 2))
@@ -86,7 +68,7 @@ end
 
 # Estimate E[k(X, X')] from samples x.
 # x has shape (d, n).
-function kernel_eval(
+function TransitionManifolds.kernel_eval(
     x::AbstractMatrix{T}, alg::KernelDStatMMD{<:Kernel}
 )::T where {T<:AbstractFloat}
     n = size(x, 2)
