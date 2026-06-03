@@ -37,7 +37,7 @@ end
 
 Generate `n_samples` random samples from jagged `data`.
 
-The output is a `(d, n_samples)` matrix of column views.
+The output is a `(d, n_samples)` matrix.
 If there are less than `n_samples` data points in `data`, the output will
 contain only all data points, i.e., will have less than `n_samples` columns.
 """

@@ -124,6 +124,13 @@ end
 TransitionDistanceProblem(data; weights=nothing) = TransitionDistanceProblem(data, weights)
 
 """
+    layout(prob::TransitionDistanceProblem)
+
+Layout of `prob`; either [`Contiguous`](@ref) or [`Jagged`](@ref).
+"""
+layout(::TransitionDistanceProblem{T,W,L}) where {T,W,L} = L
+
+"""
     TransitionDistanceResult{T<:Real}
 
 Struct for storing the result of the transition distances computation,
