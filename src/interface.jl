@@ -97,6 +97,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
         end
 
         if L === Contiguous
+            #FIXME: I though there is a weight per sample. It says this in the docstring...
             size(data) == size(weights) ||
                 throw(ArgumentError("shapes of data and weights do not match"))
             return new{T,W,L}(data, weights)
@@ -105,7 +106,7 @@ struct TransitionDistanceProblem{T<:Real,W<:Union{Real,Nothing},L<:AbstractDataL
         # L === Jagged
         # check same n_anchors
         length(data) == length(weights) ||
-            throw(ArgumentError("lenghts of data and weights do not match"))
+            throw(ArgumentError("lengths of data and weights do not match"))
 
         # check same sample sizes
         for (x, y) in zip(data, weights)
@@ -157,6 +158,7 @@ function compute_distances(
     )
 end
 
+#FIXME: Should the weights be per sample or per data 'observation?' i.e. each graph?
 """
     compute_distances(data, alg::AbstractTransitionDistanceAlgorithm; weights=nothing, progress=false) -> TransitionDistanceResult
 
