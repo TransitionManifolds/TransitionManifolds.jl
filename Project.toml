@@ -30,4 +30,4 @@ StatsBase = "0.34.10"
 Tullio = "0.3.9"
 
 [workspace]
-projects = ["test", "benchmark"]
+projects = ["test", "benchmark", "docs"]

@@ -1,0 +1,5 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+KernelFunctions = "ec8451be-7e33-11e9-00cf-bbf324bd1392"
+TransitionManifolds = "e1630922-6a54-49b2-ac96-451a43c20e09"

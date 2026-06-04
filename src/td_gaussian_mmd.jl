@@ -1,4 +1,9 @@
 # ---------------- GaussianVStatMMD ---------------------------
+"""
+    GaussianVStatMMD(...) <: AbstractTransitionDistanceAlgorithm
+
+Not implemented yet!
+"""
 struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
     bandwidth::Union{Float64,Nothing}
     blocksize::Int
