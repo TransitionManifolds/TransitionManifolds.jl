@@ -14,3 +14,5 @@ makedocs(;
         Base.get_extension(TransitionManifolds, :KernelMMDExt),
     ],
 )
+
+deploydocs(; repo="github.com/TransitionManifolds/TransitionManifolds.jl.git")
