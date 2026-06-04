@@ -7,7 +7,6 @@ using KernelFunctions
 
 makedocs(
   sitename="TransitionManifolds.jl";
-  remotes=nothing,
   checkdocs=:exports,
   modules=[
     TransitionManifolds,
