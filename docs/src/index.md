@@ -88,6 +88,10 @@ preprocess
 PreprocessResult
 ```
 
+```@docs
+Trajectories
+```
+
 
 ## Helper functions
 

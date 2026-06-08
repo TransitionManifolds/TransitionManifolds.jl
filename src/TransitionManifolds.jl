@@ -3,7 +3,7 @@ module TransitionManifolds
 # ------------- Imports -----------------
 using LinearAlgebra
 using StatsBase: quantile, sample, median, cov
-using Distances: pairwise, SqEuclidean
+using Distances: pairwise, SqEuclidean, Metric, Euclidean
 using LoopVectorization: @turbo
 using Tullio: @tullio
 using ProgressMeter: Progress, next!
@@ -27,5 +27,8 @@ export KernelVStatMMD, KernelDStatMMD
 
 include("em_diffusion_maps.jl")
 export DiffusionMaps
+
+include("pre_trajs.jl")
+export Trajectories
 
 end # module TransitionManifolds
