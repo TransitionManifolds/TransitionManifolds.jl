@@ -61,13 +61,14 @@ function mean_jump_dist(trajs::Trajectories, dist::Metric)::Float64
 end
 
 """
-    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist::Real) -> PreprocessResult
+    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist::Real, max_samples::Int) -> PreprocessResult
 
 Obtain approximate burst simulation data from [`Trajectories`](@ref).
 
 The `anchors` should be provided as a `(d, n_anchors)` shaped `Matrix`.
 Then, for each anchor ``a`` this function finds the trajectory points ``x_i`` closer than `max_dist`
 in the metric `dist` (see `Distances.jl`), and adds the successors ``x_{i+1}`` to the samples for ``a``.
+Only the `max_samples` closest trajectory points are considered for each anchor (default: `max_samples = ∞`).
 
 If no `anchors` are provided, it uses random samples from the trajectories.
 If no `max_dist` is provided, it uses half the average jump distance from the trajectories.
@@ -84,6 +85,7 @@ function preprocess(
     anchors::Union{AbstractArray{T,2},Nothing}=nothing,
     dist::Metric=Euclidean(),
     max_dist::Union{Real,Nothing}=nothing,
+    max_samples::Int=typemax(Int),
 )::PreprocessResult where {T<:Real}
     # TODO: allow a vector of max_dists, one for each anchor.
     # We could also automatically guess a reasonable max_dist for each anchor
@@ -112,13 +114,18 @@ function preprocess(
     out = [V[] for _ in 1:n_anchors]
 
     for traj in data.trajs
-        @views distances = pairwise(dist, traj[:, 1:(end - 1)], anchors; dims=2)
+        distances = pairwise(dist, @view(traj[:, 1:(end - 1)]), anchors; dims=2)
 
         for i in 1:n_anchors
-            for j in axes(distances, 1)
-                if distances[j, i] <= max_dist
-                    @views push!(out[i], traj[:, j + 1])
-                end
+            dcol = @view distances[:, i]
+            valid_idxs = findall(<=(max_dist), dcol)
+            n_valid = length(valid_idxs)
+            if n_valid > max_samples
+                partialsort!(valid_idxs, 1:max_samples; by=j -> dcol[j])
+                n_valid = max_samples
+            end
+            for j in @view valid_idxs[1:n_valid]
+                push!(out[i], @view traj[:, j + 1])
             end
         end
     end
