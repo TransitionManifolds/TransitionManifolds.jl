@@ -137,6 +137,11 @@ function kernel_eval(
     x::AbstractMatrix{T}, alg::GaussianDStatMMD
 )::T where {T<:AbstractFloat}
     n = size(x, 2)
+    if n == 1 # otherwise we divide by 0 later
+        # returning "1" so that all anchors have a large distance to this one
+        return one(T)
+    end
+
     inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
     out = zero(T)
 
