@@ -86,6 +86,7 @@ function preprocess(
     dist::Metric=Euclidean(),
     max_dist::Union{Real,Nothing}=nothing,
     max_samples::Int=typemax(Int),
+    # TODO: add min_samples
 )::PreprocessResult where {T<:Real}
     # TODO: allow a vector of max_dists, one for each anchor.
     # We could also automatically guess a reasonable max_dist for each anchor
