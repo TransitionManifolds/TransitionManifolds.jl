@@ -64,53 +64,52 @@
                 hcat([0, 2], [0, 1], [0, 0.25], [0, 0], [0.5, 0], [1.5, 0])
             )
             anchors = hcat([0, 1.5], [0, 0])
-            res = preprocess(trajs; anchors=anchors, max_dist=1)
-            samples = res.prob.data
 
-            # first anchor:
-            # close start points are [0, 2] and [0, 1]
-            # -> samples are [0, 1] and [0, 0.25]
-            s1 = samples[1]
-            @test size(s1) == (2, 2)
-            @test [0, 1] in eachcol(s1)
-            @test [0, 0.25] in eachcol(s1)
+            @testset "default" begin
+                res = preprocess(trajs; anchors=anchors, max_dist=1)
+                samples = res.prob.data
 
-            # second anchor:
-            # close start points are [0, 1], [0, 0.25], [0, 0], [0.5, 0]
-            # -> samples are [0, 0.25], [0, 0], [0.5, 0], [1.5, 0]
-            s2 = samples[2]
-            @test size(s2) == (2, 4)
-            @test [0, 0.25] in eachcol(s2)
-            @test [0, 0] in eachcol(s2)
-            @test [0.5, 0] in eachcol(s2)
-            @test [1.5, 0] in eachcol(s2)
-        end
+                # first anchor:
+                # close start points are [0, 2] and [0, 1]
+                # -> samples are [0, 1] and [0, 0.25]
+                s1 = samples[1]
+                @test size(s1) == (2, 2)
+                @test [0, 1] in eachcol(s1)
+                @test [0, 0.25] in eachcol(s1)
 
-        @testset "max_samples" begin
-            trajs = Trajectories(
-                hcat([0, 2], [0, 1], [0, 0.25], [0, 0], [0.5, 0], [1.5, 0])
-            )
-            anchors = hcat([0, 1.5], [0, 0])
-            res = preprocess(trajs; anchors=anchors, max_dist=1, max_samples=3)
-            samples = res.prob.data
+                # second anchor:
+                # close start points are [0, 1], [0, 0.25], [0, 0], [0.5, 0]
+                # -> samples are [0, 0.25], [0, 0], [0.5, 0], [1.5, 0]
+                s2 = samples[2]
+                @test size(s2) == (2, 4)
+                @test [0, 0.25] in eachcol(s2)
+                @test [0, 0] in eachcol(s2)
+                @test [0.5, 0] in eachcol(s2)
+                @test [1.5, 0] in eachcol(s2)
+            end
 
-            # first anchor:
-            # close start points are [0, 2] and [0, 1]
-            # -> samples are [0, 1] and [0, 0.25]
-            s1 = samples[1]
-            @test size(s1) == (2, 2)
-            @test [0, 1] in eachcol(s1)
-            @test [0, 0.25] in eachcol(s1)
+            @testset "max_samples" begin
+                res = preprocess(trajs; anchors=anchors, max_dist=1, max_samples=3)
+                samples = res.prob.data
 
-            # second anchor:
-            # close start points are [0, 1], [0, 0.25], [0, 0], [0.5, 0]
-            # -> samples are [0, 0.25], [0, 0], [0.5, 0], [1.5, 0]
-            # max_samples = 3: the startpoint [0, 1] is the farthest and should be deleted 
-            s2 = samples[2]
-            @test size(s2) == (2, 3)
-            @test [0, 0] in eachcol(s2)
-            @test [0.5, 0] in eachcol(s2)
-            @test [1.5, 0] in eachcol(s2)
+                # first anchor:
+                # close start points are [0, 2] and [0, 1]
+                # -> samples are [0, 1] and [0, 0.25]
+                s1 = samples[1]
+                @test size(s1) == (2, 2)
+                @test [0, 1] in eachcol(s1)
+                @test [0, 0.25] in eachcol(s1)
+
+                # second anchor:
+                # close start points are [0, 1], [0, 0.25], [0, 0], [0.5, 0]
+                # -> samples are [0, 0.25], [0, 0], [0.5, 0], [1.5, 0]
+                # max_samples = 3: the startpoint [0, 1] is the farthest and should be deleted 
+                s2 = samples[2]
+                @test size(s2) == (2, 3)
+                @test [0, 0] in eachcol(s2)
+                @test [0.5, 0] in eachcol(s2)
+                @test [1.5, 0] in eachcol(s2)
+            end
         end
 
         @testset "default kwargs" begin
