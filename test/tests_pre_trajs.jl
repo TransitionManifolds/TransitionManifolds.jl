@@ -114,7 +114,9 @@
             end
 
             @testset "min_samples" begin
-                res = preprocess(trajs; anchors=anchors, max_dist=1, min_samples=3)
+                res = @test_warn "" preprocess(
+                    trajs; anchors=anchors, max_dist=1, min_samples=3
+                )
                 samples = res.prob.data
                 @test length(samples) == 1
 
@@ -160,7 +162,7 @@
 
             # for anchors 2 and 4, all samples match
             # for anchors 1 and 3, no samples match and they should be removed
-            res = preprocess(data; anchors=anchors, max_dist=10)
+            res = @test_warn "" preprocess(data; anchors=anchors, max_dist=10)
 
             @test res.info["anchors"] == anchors[:, [2, 4]]
             out = res.prob.data
