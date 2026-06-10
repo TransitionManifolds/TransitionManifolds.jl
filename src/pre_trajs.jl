@@ -73,7 +73,7 @@ Only the `max_samples` closest trajectory points are considered for each anchor 
 If no `anchors` are provided, it uses random samples from the trajectories.
 If no `max_dist` is provided, it uses half the average jump distance from the trajectories.
 
-All `anchors` that by the end have less than `min_samles` samples are removed (default: `min_samples=1`).
+All `anchors` that by the end have less than `min_samples` samples are removed (default: `min_samples=1`).
 
 The `res.info` dictionary contains
 
