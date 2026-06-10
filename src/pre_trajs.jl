@@ -61,7 +61,7 @@ function mean_jump_dist(trajs::Trajectories, dist::Metric)::Float64
 end
 
 """
-    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist::Real, max_samples::Int) -> PreprocessResult
+    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist::Real, min_samples::Int, max_samples::Int) -> PreprocessResult
 
 Obtain approximate burst simulation data from [`Trajectories`](@ref).
 
@@ -73,7 +73,7 @@ Only the `max_samples` closest trajectory points are considered for each anchor 
 If no `anchors` are provided, it uses random samples from the trajectories.
 If no `max_dist` is provided, it uses half the average jump distance from the trajectories.
 
-Any `anchors` that by the end have no samples are removed, so that the result does not contain empty arrays.
+All `anchors` that by the end have less than `min_samles` samples are removed (default: `min_samples=1`).
 
 The `res.info` dictionary contains
 
@@ -85,8 +85,8 @@ function preprocess(
     anchors::Union{AbstractArray{T,2},Nothing}=nothing,
     dist::Metric=Euclidean(),
     max_dist::Union{Real,Nothing}=nothing,
+    min_samples::Int=1,
     max_samples::Int=typemax(Int),
-    # TODO: add min_samples
 )::PreprocessResult where {T<:Real}
     # TODO: allow a vector of max_dists, one for each anchor.
     # We could also automatically guess a reasonable max_dist for each anchor
@@ -131,18 +131,20 @@ function preprocess(
         end
     end
 
-    # deal with anchors that dont have any matching samples
-    not_empty_idxs = findall(s -> !isempty(s), out)
-    n_empty = n_anchors - length(not_empty_idxs)
-    if n_empty == n_anchors
-        error("did not find any matching samples for any provided anchor")
+    # remove anchors that have less than `min_samples` samples
+    keep_idxs = findall(s -> length(s) >= min_samples, out)
+    n_remove = n_anchors - length(keep_idxs)
+    if n_remove == n_anchors
+        error(
+            "all anchors have less than `min_samples` matching samples and have been removed",
+        )
     end
-    n_empty == 0 ||
-        @warn "$n_empty anchors do not have any matching samples and were removed. See the `res.info` dict for the remaining anchors"
-    filter!(s -> !isempty(s), out)
+    n_remove == 0 ||
+        @warn "$n_remove anchors have less than `min_samples` matching samples and were removed. See the `res.info` dict for the remaining anchors"
+    filter!(s -> length(s) >= min_samples, out)
+    anchors = anchors[:, keep_idxs]
 
     out = map(stack, out)  # this creates owned copies from the views
-    anchors = anchors[:, not_empty_idxs] # remove the anchors that have no samples
 
     return PreprocessResult(
         TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dist)
