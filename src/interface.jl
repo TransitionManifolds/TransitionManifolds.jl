@@ -130,6 +130,35 @@ Layout of `prob`; either [`Contiguous`](@ref) or [`Jagged`](@ref).
 """
 layout(::TransitionDistanceProblem{T,W,L}) where {T,W,L} = L
 
+function cat_anchors(
+    probs::TransitionDistanceProblem{T,W,Contiguous}...
+)::TransitionDistanceProblem{T,W,Contiguous} where {T,W}
+    (d, n_samples) = size(probs[1].data)[1:2]
+    all(map(p -> size(p.data, 1) == d, probs)) ||
+        throw(ArgumentError("dimension `d` of all problems must match"))
+    all(map(p -> size(p.data, 2) == n_samples, probs)) ||
+        throw(ArgumentError("`n_samples` of all problems must match"))
+
+    data = cat(map(p -> p.data, probs)...; dims=3)
+    weights = W === Nothing ? nothing : cat(map(p -> p.weights, probs)...; dims=2)
+    return TransitionDistanceProblem(data, weights)
+end
+
+function append_anchors!(
+    prob::TransitionDistanceProblem{T,W,Jagged},
+    probs::TransitionDistanceProblem{T,W,Jagged}...,
+) where {T,W}
+    d = size(prob.data[1], 1)
+    all(map(p -> size(p.data[1], 1) == d, probs)) ||
+        throw(ArgumentError("dimensions `d` of all problems must match"))
+
+    append!(prob.data, map(p -> p.data, probs)...)
+    if !(W === Nothing)
+        append!(prob.weights, map(p -> p.weights, probs)...)
+    end
+    return prob
+end
+
 """
     TransitionDistanceResult{T<:Real}
 
