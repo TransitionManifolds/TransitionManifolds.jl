@@ -130,6 +130,13 @@ Layout of `prob`; either [`Contiguous`](@ref) or [`Jagged`](@ref).
 """
 layout(::TransitionDistanceProblem{T,W,L}) where {T,W,L} = L
 
+"""
+    cat_anchors(probs::TransitionDistanceProblem{T,W,Contiguous}...) -> TransitionDistanceProblem{T,W,Contiguous}
+
+Concatenate multiple [`TransitionDistanceProblem`](@ref) of matching dimensions along the anchor dimension.
+
+Only for [`Contiguous`](@ref) layout. For [`Jagged`](@ref) layout, see [`append_anchors!`](@ref).
+"""
 function cat_anchors(
     probs::TransitionDistanceProblem{T,W,Contiguous}...
 )::TransitionDistanceProblem{T,W,Contiguous} where {T,W}
@@ -144,6 +151,13 @@ function cat_anchors(
     return TransitionDistanceProblem(data, weights)
 end
 
+"""
+    append_anchors!(prob::TransitionDistanceProblem{T,W,Jagged}, probs::TransitionDistanceProblem{T,W,Jagged}...)
+
+Append multiple [`TransitionDistanceProblem`](@ref) of matching dimensions onto `prob`, increasing the number of anchors.
+
+Only for [`Jagged`](@ref) layout. For [`Contiguous`](@ref) layout, see [`cat_anchors`](@ref).
+"""
 function append_anchors!(
     prob::TransitionDistanceProblem{T,W,Jagged},
     probs::TransitionDistanceProblem{T,W,Jagged}...,

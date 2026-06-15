@@ -100,5 +100,13 @@ compute_transition_manifold
 ```
 
 ```@docs
+cat_anchors
+```
+
+```@docs
+append_anchors!
+```
+
+```@docs
 normalize_cloud
 ```
