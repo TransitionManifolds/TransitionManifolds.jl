@@ -69,4 +69,61 @@
         @test_throws ArgumentError TransitionDistanceProblem(xj, wc)
         @test_throws ArgumentError TransitionDistanceProblem(xc, wj)
     end
+
+    @testset "cat anchors" begin
+        @testset "no weights" begin
+            p1 = TransitionDistanceProblem(rand(4, 3, 2))
+            p2 = TransitionDistanceProblem(rand(4, 3, 5))
+            p3 = TransitionDistanceProblem(rand(4, 3, 1))
+            p = cat_anchors(p1, p2, p3)
+            @test p isa TransitionDistanceProblem{Float64,Nothing,Contiguous}
+            @test size(p.data) == (4, 3, 8)
+            @test p.data[:, :, 1:2] == p1.data
+            @test p.data[:, :, 3:7] == p2.data
+            @test p.data[:, :, 8:8] == p3.data
+        end
+
+        @testset "weights" begin
+            p1 = TransitionDistanceProblem(rand(4, 3, 2), rand(3, 2))
+            p2 = TransitionDistanceProblem(rand(4, 3, 5), rand(3, 5))
+            p = cat_anchors(p1, p2)
+            @test p isa TransitionDistanceProblem{Float64,Float64,Contiguous}
+            @test size(p.data) == (4, 3, 7)
+            @test size(p.weights) == (3, 7)
+            @test p.data[:, :, 1:2] == p1.data
+            @test p.weights[:, 1:2] == p1.weights
+            @test p.data[:, :, 3:7] == p2.data
+            @test p.weights[:, 3:7] == p2.weights
+        end
+    end
+
+    @testset "append anchors" begin
+        @testset "no weights" begin
+            p1_data = [rand(4, 3), rand(4, 2)]
+            p1 = TransitionDistanceProblem(copy(p1_data))
+            p2 = TransitionDistanceProblem([rand(4, 4), rand(4, 3), rand(4, 2)])
+            p3 = TransitionDistanceProblem([rand(4, 3)])
+            append_anchors!(p1, p2, p3)
+            @test length(p1.data) == 6
+            @test p1.data[1:2] == p1_data
+            @test p1.data[3:5] == p2.data
+            @test p1.data[6:6] == p3.data
+        end
+
+        @testset "weights" begin
+            p1_data = [rand(4, 3), rand(4, 2)]
+            p1_weights = [rand(3), rand(2)]
+            p1 = TransitionDistanceProblem(copy(p1_data), copy(p1_weights))
+            p2 = TransitionDistanceProblem(
+                [rand(4, 4), rand(4, 3), rand(4, 2)], [rand(4), rand(3), rand(2)]
+            )
+            append_anchors!(p1, p2)
+            @test length(p1.data) == 5
+            @test length(p1.weights) == 5
+            @test p1.data[1:2] == p1_data
+            @test p1.weights[1:2] == p1_weights
+            @test p1.data[3:5] == p2.data
+            @test p1.weights[3:5] == p2.weights
+        end
+    end
 end

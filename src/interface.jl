@@ -140,14 +140,14 @@ function cat_anchors(
         throw(ArgumentError("`n_samples` of all problems must match"))
 
     data = cat(map(p -> p.data, probs)...; dims=3)
-    weights = W === Nothing ? nothing : cat(map(p -> p.weights, probs)...; dims=2)
+    weights = (W === Nothing) ? nothing : cat(map(p -> p.weights, probs)...; dims=2)
     return TransitionDistanceProblem(data, weights)
 end
 
 function append_anchors!(
     prob::TransitionDistanceProblem{T,W,Jagged},
     probs::TransitionDistanceProblem{T,W,Jagged}...,
-) where {T,W}
+)::TransitionDistanceProblem{T,W,Jagged} where {T,W}
     d = size(prob.data[1], 1)
     all(map(p -> size(p.data[1], 1) == d, probs)) ||
         throw(ArgumentError("dimensions `d` of all problems must match"))
