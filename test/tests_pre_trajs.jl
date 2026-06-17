@@ -34,6 +34,17 @@
         end
     end
 
+    @testset "iteration and length" begin
+        t1 = rand(3, 10)
+        t2 = rand(3, 5)
+        trajs = Trajectories([t1, t2])
+
+        @test length(trajs) == 15
+        points = [p for p in trajs]
+        @test points[1:10] == eachcol(t1)
+        @test points[11:15] == eachcol(t2)
+    end
+
     @testset "sample_points" begin
         t1 = rand(3, 10)
         t2 = rand(3, 5)

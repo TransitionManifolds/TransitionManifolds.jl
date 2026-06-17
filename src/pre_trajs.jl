@@ -6,7 +6,10 @@
 Struct for storing one or multiple trajectories `trajs` of data type `T`.
 
 The argument `trajs` is either a single trajectory in the form of a `(d, n_points)` shaped `Matrix{T}`,
-or multiple trajectories in the form of a `Vector{Matrix{T}}`.
+or multiple trajectories in the form of a `Vector{Matrix{T}}` where each trajectory has the same dimension `d`.
+
+The `length(::Trajectories)` returns the total number of points across all trajectories.
+Supports iteration over all trajectory points, e.g., `for point in trajs`.
 """
 struct Trajectories{T<:Real}
     trajs::AbstractVector{<:AbstractArray{T,2}}
@@ -31,6 +34,18 @@ struct Trajectories{T<:Real}
 end
 
 Trajectories(traj::AbstractArray{<:Real,2}) = Trajectories([traj])
+
+Base.length(trajs::Trajectories) = trajs.n_points
+
+function Base.iterate(trajs::Trajectories, state=(1, 1))
+    traj_idx, point_idx = state
+    traj_idx <= trajs.n_trajs || return nothing
+
+    traj = trajs.trajs[traj_idx]
+    out = @view traj[:, point_idx]
+    new_state = (point_idx < size(traj, 2)) ? (traj_idx, point_idx + 1) : (traj_idx + 1, 1)
+    return (out, new_state)
+end
 
 # Sample `n` random points from `trajs`, excluding the end points.
 # Returns a `(d, n)` Matrix.
