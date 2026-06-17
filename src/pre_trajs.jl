@@ -1,15 +1,15 @@
 # Preprocessing of trajectory data
 
 """
-    Trajectories{T<:Real}(trajs)
+    Trajectories{T<:Real}(data)
 
 Struct for storing one or multiple trajectories `trajs` of data type `T`.
 
-The argument `trajs` is either a single trajectory in the form of a `(d, n_points)` shaped `Matrix{T}`,
+The `data` is either a single trajectory in the form of a `(d, n_points)` shaped `Matrix{T}`,
 or multiple trajectories in the form of a `Vector{Matrix{T}}` where each trajectory has the same dimension `d`.
 
-The `length(::Trajectories)` returns the total number of points across all trajectories.
-Supports iteration over all trajectory points, e.g., `for point in trajs`.
+The `length(trajs)` returns the total number of points across all trajectories.
+Also supports iteration over all trajectory points, e.g., `for point in trajs`.
 
 Indexing at `i` returns a view of the `i`-th point, `1 <= i <= length(trajs)`.
 (Example: if the first trajectory has 3 points, `trajs[4]` returns the first point of the second trajectory.)
