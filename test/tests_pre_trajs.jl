@@ -45,6 +45,29 @@
         @test points[11:15] == eachcol(t2)
     end
 
+    @testset "indexing" begin
+        t1 = rand(3, 3)
+        t2 = rand(3, 5)
+        t3 = rand(3, 4)
+        trajs = Trajectories([t1, t2, t3])
+
+        @test trajs.offsets == [1, 4, 9, 13]
+        @test trajs[begin] == t1[:, 1]
+        @test trajs[end] == t3[:, 4]
+
+        for i in 1:3
+            @test trajs[i] == t1[:, i]
+        end
+        for i in 4:8
+            @test trajs[i] == t2[:, i - 3]
+        end
+        for i in 9:12
+            @test trajs[i] == t3[:, i - 8]
+        end
+
+        @test_throws BoundsError trajs[13]
+    end
+
     @testset "sample_points" begin
         t1 = rand(3, 10)
         t2 = rand(3, 5)

@@ -10,6 +10,9 @@ or multiple trajectories in the form of a `Vector{Matrix{T}}` where each traject
 
 The `length(::Trajectories)` returns the total number of points across all trajectories.
 Supports iteration over all trajectory points, e.g., `for point in trajs`.
+
+Indexing at `i` returns a view of the `i`-th point, `1 <= i <= length(trajs)`.
+(Example: if the first trajectory has 3 points, `trajs[4]` returns the first point of the second trajectory.)
 """
 struct Trajectories{T<:Real}
     trajs::AbstractVector{<:AbstractArray{T,2}}
@@ -17,19 +20,26 @@ struct Trajectories{T<:Real}
     d::Int  # dimension
     n_points::Int  # total number of points
 
+    # start inidices of each trajectory for indexing,
+    # e.g., trajectory `i` has indices `offsets[i]:offsets[i+1]-1`
+    offsets::Vector{Int}
+
     function Trajectories(trajs::AbstractVector{<:AbstractArray{T,2}}) where {T<:Real}
         n_trajs = length(trajs)
         n_trajs > 0 || throw(ArgumentError("trajs must not be empty"))
         d = size(trajs[1], 1)
         n_points = 0
+        offsets = Int[1]
         for traj in trajs
             size(traj, 1) == d ||
                 throw(ArgumentError("all trajs must have same dimension `d`"))
-            size(traj, 2) >= 2 ||
+            this_n_points = size(traj, 2)
+            this_n_points >= 2 ||
                 throw(ArgumentError("all trajs must contain atleast two points"))
-            n_points += size(traj, 2)
+            n_points += this_n_points
+            push!(offsets, offsets[end] + this_n_points)
         end
-        new{T}(trajs, n_trajs, d, n_points)
+        new{T}(trajs, n_trajs, d, n_points, offsets)
     end
 end
 
@@ -46,6 +56,15 @@ function Base.iterate(trajs::Trajectories, state=(1, 1))
     new_state = (point_idx < size(traj, 2)) ? (traj_idx, point_idx + 1) : (traj_idx + 1, 1)
     return (out, new_state)
 end
+
+function Base.getindex(trajs::Trajectories, i::Int)
+    1 <= i <= trajs.n_points || throw(BoundsError(trajs, i))
+    traj_idx = searchsortedlast(trajs.offsets, i)
+    point_idx = i - trajs.offsets[traj_idx] + 1
+    return @view trajs.trajs[traj_idx][:, point_idx]
+end
+Base.firstindex(::Trajectories) = 1
+Base.lastindex(trajs::Trajectories) = trajs.n_points
 
 # Sample `n` random points from `trajs`, excluding the end points.
 # Returns a `(d, n)` Matrix.
