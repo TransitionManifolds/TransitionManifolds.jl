@@ -65,6 +65,9 @@
             @test trajs[i] == t3[:, i - 8]
         end
 
+        @test trajs[4:8] == eachcol(t2)
+        @test trajs[[1, 5, 11]] == [t1[:, 1], t2[:, 2], t3[:, 3]]
+
         @test_throws BoundsError trajs[13]
     end
 

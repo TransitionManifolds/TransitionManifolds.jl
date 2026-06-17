@@ -63,6 +63,7 @@ function Base.getindex(trajs::Trajectories, i::Int)
     point_idx = i - trajs.offsets[traj_idx] + 1
     return @view trajs.trajs[traj_idx][:, point_idx]
 end
+Base.getindex(trajs::Trajectories, idxs::AbstractVector{Int}) = [trajs[i] for i in idxs]
 Base.firstindex(::Trajectories) = 1
 Base.lastindex(trajs::Trajectories) = trajs.n_points
 
