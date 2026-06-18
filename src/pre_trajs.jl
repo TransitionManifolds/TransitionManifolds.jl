@@ -222,7 +222,7 @@ function _center_farthest_points(
 end
 
 """
-    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist::Real, min_samples::Int, max_samples::Int) -> PreprocessResult
+    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist, min_samples::Int, max_samples::Int) -> PreprocessResult
 
 Obtain approximate burst simulation data from [`Trajectories`](@ref).
 
@@ -233,7 +233,8 @@ Then, for each anchor ``a`` this function finds the trajectory points ``x_i`` cl
 in the metric `dist` (see `Distances.jl`), and adds the successors ``x_{i+1}`` to the samples for ``a``.
 Only the `max_samples` closest trajectory points are considered for each anchor (default: `max_samples = ∞`).
 
-If no `anchors` are provided, it uses random samples from the trajectories.
+The `max_dist` can either be given as a `Real`, in which case this value will be used for all anchors,
+or as a `Vector{Real}`, in which case `max_dist[l]` will be used for the `l`-th anchor.
 If no `max_dist` is provided, it uses half the average jump distance from the trajectories.
 
 All `anchors` that by the end have less than `min_samples` samples are removed (default: `min_samples=1`).
@@ -241,41 +242,51 @@ All `anchors` that by the end have less than `min_samples` samples are removed (
 The `res.info` dictionary contains
 
   - `res.info["anchors"]`: the final set of anchors
-  - `res.info["max_dist"]`: the used `max_dist`
+  - `res.info["max_dist"]`: the used `max_dist` for each anchor
 """
 function preprocess(
     data::Trajectories{T};
     anchors::Union{AbstractArray{T,2},Int,Nothing}=nothing,
     dist::Metric=Euclidean(),
-    max_dist::Union{Real,Nothing}=nothing,
+    max_dist::Union{Real,Vector{<:Real},Nothing}=nothing,
     min_samples::Int=1,
     max_samples::Int=typemax(Int),
 )::PreprocessResult where {T<:Real}
-    # TODO: allow a vector of max_dists, one for each anchor.
-    # We could also automatically guess a reasonable max_dist for each anchor
-    # by taking the mean_jump_dist of the 10 nearest neighbors
+    # TODO: automatically guess a reasonable max_dist for each anchor
+    # by taking the mean_jump_dist of the k nearest neighbors
 
+    # NOTE: if we construct a BallTree anyway for finding the nearest neighbors,
+    # it can be used to speed up finding close points,
+    # see `inrange` of NearestNeighbours.jl
+
+    # process `anchors`
     if isnothing(anchors)
         # if no anchors were provided, set it to 1% of trajs points, but at most 1000
         anchors = round(Int, length(data) * 0.01)
         anchors = clamp(anchors, 2, 1000)
     end
-
     if anchors isa Int
         # use farthest point sampling to generate anchors
         anchors >= 2 || throw(ArgumentError("`anchors` must be at least 2"))
         res = farthest_point_sampling(data, anchors; dist=dist, centering=true)
         anchors = stack(data[res.selected])
     end
+    size(anchors, 1) == data.d ||
+        throw(ArgumentError("dimension `d` of trajs and anchors must match"))
+    n_anchors = size(anchors, 2)
+    # at this point `anchors` is a (d, n_anchors) matrix
 
+    # process `max_dist`
     if isnothing(max_dist)
         max_dist = 0.5 * mean_jump_dist(data, dist)
     end
-
-    size(anchors, 1) == data.d ||
-        throw(ArgumentError("dimension `d` of trajs and anchors must match"))
-
-    n_anchors = size(anchors, 2)
+    if max_dist isa Real
+        max_dist = fill(max_dist, n_anchors)
+    end
+    length(max_dist) == n_anchors || throw(
+        ArgumentError("`max_dist` must have the same length as the number of anchors")
+    )
+    # at this point `max_dist` is a (n_anchors,) vector
 
     # store views while collecting the samples to reduce allocations.
     # at the end the views are converted to owned data.
@@ -288,7 +299,7 @@ function preprocess(
 
         for i in 1:n_anchors
             dcol = @view distances[:, i]
-            valid_idxs = findall(<=(max_dist), dcol)
+            valid_idxs = findall(<=(max_dist[i]), dcol)
             n_valid = length(valid_idxs)
             if n_valid > max_samples
                 partialsort!(valid_idxs, 1:max_samples; by=j -> dcol[j])
@@ -312,6 +323,7 @@ function preprocess(
         @warn "$n_remove anchors have less than `min_samples` matching samples and were removed. See the `res.info` dict for the remaining anchors"
     filter!(s -> length(s) >= min_samples, out)
     anchors = anchors[:, keep_idxs]
+    max_dist = max_dist[keep_idxs]
 
     out = map(stack, out)  # this creates owned copies from the views
 

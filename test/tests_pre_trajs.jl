@@ -205,7 +205,7 @@
             res = preprocess(data)
             @test size(res.info["anchors"]) == (2, 5)
             @test res.info["max_dist"] ≈
-                0.5 * TransitionManifolds.mean_jump_dist(data, Euclidean())
+                fill(0.5 * TransitionManifolds.mean_jump_dist(data, Euclidean()), 5)
         end
 
         @testset "all empty" begin
@@ -228,6 +228,7 @@
             res = @test_warn "" preprocess(data; anchors=anchors, max_dist=10)
 
             @test res.info["anchors"] == anchors[:, [2, 4]]
+            @test res.info["max_dist"] == [10, 10]
             out = res.prob.data
             @test length(out) == 2
             @test out[1] == traj[:, 2:end]
@@ -266,6 +267,29 @@
             @test out[2] == traj2[:, 9:9]
             @test out[3] == traj1[:, 18:18]
             @test out[4] == traj2[:, 2:2]
+        end
+
+        @testset "max_dist vector" begin
+            traj1 = rand(2, 20)
+            traj2 = rand(2, 10)
+            data = Trajectories([traj1, traj2])
+            anchors = stack([traj1[:, 5], traj2[:, 8], traj1[:, 17], traj2[:, 1]])
+            max_dist = [0, 0, 100, 100]
+
+            res = preprocess(data; anchors=anchors, max_dist=max_dist)
+            out = res.prob.data
+            @test length(out) == 4
+            @test res.info["max_dist"] == [0, 0, 100, 100]
+
+            # for max_dist=0, only the anchors themselves match
+            # and the output should be exactly their successors
+            @test out[1] == traj1[:, 6:6]
+            @test out[2] == traj2[:, 9:9]
+
+            # for large max_dist, all points match
+            expected_out = hcat(traj1[:, 2:end], traj2[:, 2:end])
+            @test out[3] == expected_out
+            @test out[4] == expected_out
         end
     end
 end
