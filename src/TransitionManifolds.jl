@@ -7,6 +7,7 @@ using Distances: pairwise, SqEuclidean, Metric, Euclidean
 using LoopVectorization: @turbo
 using Tullio: @tullio
 using ProgressMeter: Progress, next!
+using NearestNeighbors: BallTree, inrange!
 
 # ------------- include files -----------------
 include("interface.jl")
