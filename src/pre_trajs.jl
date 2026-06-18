@@ -126,8 +126,8 @@ The central point of cluster `l` has the minimal sum of distances to all other p
 
 Returns a [`FarthestPointSamplingResult`](@ref) object `res` that contains
 
-- `res.selected`: the indices of the `k` selected points. Retrieve the points via `trajs[res.selected]`.
-- `res.assignments`: the cluster assignment of each point, i.e., `assignments[i] = l` <=> selected point closest to `i` is `selected[l]`.
+  - `res.selected`: the indices of the `k` selected points. Retrieve the points via `trajs[res.selected]`.
+  - `res.assignments`: the cluster assignment of each point, i.e., `assignments[i] = l` <=> selected point closest to `i` is `selected[l]`.
 """
 function farthest_point_sampling(
     trajs::Trajectories,

@@ -105,7 +105,7 @@
             # first point is (0, 4), then
             # (0, 4) -> (4, 0) -> (0, 0) -> (0, 2)
             @test res.selected == [1, 6, 5, 3]
-            @test res.assignments == [1, 1, 4, 4, 3, 2, 2, 3] 
+            @test res.assignments == [1, 1, 4, 4, 3, 2, 2, 3]
         end
 
         @testset "centering" begin

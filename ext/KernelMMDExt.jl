@@ -182,7 +182,8 @@ function TransitionManifolds.kernel_eval(
 end
 
 # For Jagged.
-TransitionManifolds.kernel_eval(x::AbstractMatrix, alg::KernelVStatMMD{<:Kernel}) =
-    TransitionManifolds.kernel_eval(x, x, alg)
+TransitionManifolds.kernel_eval(x::AbstractMatrix, alg::KernelVStatMMD{<:Kernel}) = TransitionManifolds.kernel_eval(
+    x, x, alg
+)
 
 end # module
