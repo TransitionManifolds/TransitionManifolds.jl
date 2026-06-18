@@ -67,17 +67,22 @@ Base.getindex(trajs::Trajectories, idxs::AbstractVector{Int}) = [trajs[i] for i 
 Base.firstindex(::Trajectories) = 1
 Base.lastindex(trajs::Trajectories) = trajs.n_points
 
-# Sample `n` random points from `trajs`, excluding the end points.
-# Returns a `(d, n)` Matrix.
-function sample_points(trajs::Trajectories{T}, n::Int)::Matrix{T} where {T<:Real}
+"""
+    sample_points(trajs::Trajectories{T}, k::Int) -> Matrix{T}
+
+Sample `k` random points from `trajs`, excluding the end points.
+
+Returns a `(d, k)` matrix, where `d` is the dimension of `trajs`.
+"""
+function sample_points(trajs::Trajectories{T}, k::Int)::Matrix{T} where {T<:Real}
     # Build a flat index: (traj_index, point_index) for every point
     flat_index = [
         (i, j) for i in 1:(trajs.n_trajs) for j in 1:(size(trajs.trajs[i], 2) - 1)
     ]
 
-    sampled = sample(flat_index, n; replace=false)
+    sampled = sample(flat_index, k; replace=false)
 
-    out = Matrix{T}(undef, trajs.d, n)
+    out = Matrix{T}(undef, trajs.d, k)
     for (k, (i, j)) in enumerate(sampled)
         out[:, k] = trajs.trajs[i][:, j]
     end
@@ -96,11 +101,134 @@ function mean_jump_dist(trajs::Trajectories, dist::Metric)::Float64
 end
 
 """
+    FarthestPointSamplingResult
+
+Struct for storing the result of a farthest point sampling computation,
+see [`farthest_point_sampling`](@ref).
+"""
+struct FarthestPointSamplingResult
+    selected::Vector{Int}  # indices of selected points
+    assignments::Vector{Int}  # `assignments[i] = l` <=> selected point closest to `i` is `selected[l]`
+end
+
+"""
+    farthest_point_sampling(trajs::Trajectories, k::Int; dist::Metric=Euclidean(), init_idx=1, centering=false) -> FarthestPointSamplingResult
+
+Select `k` points from `trajs` using farthest point sampling.
+
+Starting from the point `trajs[init_idx]`, iteratively add the point from `trajs` to the selected points
+that is farthest from any other selected point with respect to `dist`.
+
+Optionally, if `centering=true`, execute a postprocessing step which returns the most central point of each cluster
+instead of the farthest points picked initially.
+The cluster `l` is defined by all points for which the closest selected point is the `l`-th selected point.
+The central point of cluster `l` has the minimal sum of distances to all other points in the cluster.
+
+Returns a [`FarthestPointSamplingResult`](@ref) object `res` that contains
+
+- `res.selected`: the indices of the `k` selected points. Retrieve the points via `trajs[res.selected]`.
+- `res.assignments`: the cluster assignment of each point, i.e., `assignments[i] = l` <=> selected point closest to `i` is `selected[l]`.
+"""
+function farthest_point_sampling(
+    trajs::Trajectories,
+    k::Int;
+    dist::Metric=Euclidean(),
+    init_idx::Int=1,
+    centering::Bool=false,
+)::FarthestPointSamplingResult
+    res = _farthest_point_sampling(trajs, k, dist, init_idx)
+    if centering
+        res = _center_farthest_points(res, trajs, dist)
+    end
+    return res
+end
+
+function _farthest_point_sampling(
+    trajs::Trajectories, k::Int, dist::Metric, init_idx::Int
+)::FarthestPointSamplingResult
+    n = length(trajs)
+    1 <= init_idx <= n ||
+        throw(ArgumentError("the `init_idx` must be between 1 and `n_points`=$n"))
+
+    # indices of selected points
+    selected = Vector{Int}(undef, k)
+    selected[1] = init_idx
+
+    # at the start all points are assigned to cluster 1
+    assignments = fill(1, n)
+
+    # distance of each point `i` to the nearest selected point `assignments[i]`
+    dmin = Vector{Float64}(undef, n)
+    this_point = trajs[init_idx]
+    for (i, point) in enumerate(trajs)
+        dmin[i] = dist(this_point, point)
+    end
+
+    # farthest point sampling
+    @views for l in 2:k
+        next_idx = argmax(dmin)
+        selected[l] = next_idx
+
+        # update distances
+        this_point = trajs[next_idx]
+        for (i, point) in enumerate(trajs)
+            new_dist = dist(this_point, point)
+            if new_dist < dmin[i]
+                dmin[i] = new_dist
+                assignments[i] = l
+            end
+        end
+    end
+
+    return FarthestPointSamplingResult(selected, assignments)
+end
+
+# replace each selected point by the point in its cluster that minimizes
+# the cumulative distance to all other cluster points
+function _center_farthest_points(
+    res::FarthestPointSamplingResult, trajs::Trajectories, dist::Metric
+)::FarthestPointSamplingResult
+    k = length(res.selected)
+    n = length(res.assignments)
+
+    # `clusters[l]` are the points assigned to cluster `l`
+    clusters = [Int[] for _ in 1:k]
+    for i in 1:n
+        push!(clusters[res.assignments[i]], i)
+    end
+
+    # indices of selected points
+    selected = Vector{Int}(undef, k)
+
+    # select most central point in each cluster
+    for l in 1:k
+        cluster_idxs = clusters[l]
+        cluster_data = trajs[cluster_idxs]
+
+        cum_dists = zeros(length(cluster_data))
+        for i in eachindex(cluster_data)
+            this_point = cluster_data[i]
+            for j in eachindex(cluster_data)
+                if i == j
+                    continue
+                end
+                cum_dists[i] += dist(this_point, cluster_data[j])
+            end
+        end
+        selected[l] = cluster_idxs[argmin(cum_dists)]
+    end
+
+    return FarthestPointSamplingResult(selected, res.assignments)
+end
+
+"""
     preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist::Real, min_samples::Int, max_samples::Int) -> PreprocessResult
 
 Obtain approximate burst simulation data from [`Trajectories`](@ref).
 
-The `anchors` should be provided as a `(d, n_anchors)` shaped `Matrix`.
+The `anchors` should be provided either as a `(d, n_anchors)` shaped `Matrix`, or as an `Int`.
+If given as an `Int`, this number of anchors will be generated using [`farthest_point_sampling`](@ref).
+
 Then, for each anchor ``a`` this function finds the trajectory points ``x_i`` closer than `max_dist`
 in the metric `dist` (see `Distances.jl`), and adds the successors ``x_{i+1}`` to the samples for ``a``.
 Only the `max_samples` closest trajectory points are considered for each anchor (default: `max_samples = ∞`).
@@ -117,7 +245,7 @@ The `res.info` dictionary contains
 """
 function preprocess(
     data::Trajectories{T};
-    anchors::Union{AbstractArray{T,2},Nothing}=nothing,
+    anchors::Union{AbstractArray{T,2},Int,Nothing}=nothing,
     dist::Metric=Euclidean(),
     max_dist::Union{Real,Nothing}=nothing,
     min_samples::Int=1,
@@ -128,10 +256,16 @@ function preprocess(
     # by taking the mean_jump_dist of the 10 nearest neighbors
 
     if isnothing(anchors)
-        # if no anchors were provided, choose 1% random start points, but at most 1000
-        n_anchors = round(Int, data.n_points * 0.01)
-        n_anchors = clamp(n_anchors, 2, 1000)
-        anchors = sample_points(data, n_anchors)
+        # if no anchors were provided, set it to 1% of trajs points, but at most 1000
+        anchors = round(Int, length(data) * 0.01)
+        anchors = clamp(anchors, 2, 1000)
+    end
+
+    if anchors isa Int
+        # use farthest point sampling to generate anchors
+        anchors >= 2 || throw(ArgumentError("`anchors` must be at least 2"))
+        res = farthest_point_sampling(data, anchors; dist=dist, centering=true)
+        anchors = stack(data[res.selected])
     end
 
     if isnothing(max_dist)

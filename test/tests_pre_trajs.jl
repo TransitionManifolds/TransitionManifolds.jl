@@ -75,7 +75,7 @@
         t1 = rand(3, 10)
         t2 = rand(3, 5)
         trajs = Trajectories([t1, t2])
-        samples = TransitionManifolds.sample_points(trajs, 6)
+        samples = sample_points(trajs, 6)
         @test size(samples) == (3, 6)
 
         all = vcat(eachcol(t1), eachcol(t2))
@@ -93,6 +93,32 @@
         trajs = Trajectories([t1, t2])
         expected = (1.0 + 0.5 + 3.0) / 3
         @test TransitionManifolds.mean_jump_dist(trajs, Euclidean()) ≈ expected
+    end
+
+    @testset "farthest point sampling" begin
+        @testset "no centering" begin
+            t1 = hcat([0, 4.0], [0, 3.1], [0, 2.0], [0, 1.1], [0, 0])
+            t2 = hcat([4.0, 0], [3.0, 0], [1.0, 0])
+            trajs = Trajectories([t1, t2])
+            res = farthest_point_sampling(trajs, 4)
+
+            # first point is (0, 4), then
+            # (0, 4) -> (4, 0) -> (0, 0) -> (0, 2)
+            @test res.selected == [1, 6, 5, 3]
+            @test res.assignments == [1, 1, 4, 4, 3, 2, 2, 3] 
+        end
+
+        @testset "centering" begin
+            t1 = hcat([-0.1, 0], [0.15, 0], [0, 0])
+            t2 = hcat([1.0, 0], [1.2, 0], [0.8, 0], [1.1, 0], [0.9, 0])
+            trajs = Trajectories([t1, t2])
+
+            # (-0.1, 0) and (1.2, 0)
+            @test farthest_point_sampling(trajs, 2).selected == [1, 5]
+
+            # with centering, (0, 0) and (1, 0)
+            @test farthest_point_sampling(trajs, 2; centering=true).selected == [3, 4]
+        end
     end
 
     @testset "preprocess" begin

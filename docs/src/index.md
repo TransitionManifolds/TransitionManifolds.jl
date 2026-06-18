@@ -88,8 +88,22 @@ preprocess
 PreprocessResult
 ```
 
+### Trajectories
+
 ```@docs
 Trajectories
+```
+
+```@docs
+sample_points
+```
+
+```@docs
+farthest_point_sampling
+```
+
+```@docs
+FarthestPointSamplingResult
 ```
 
 
