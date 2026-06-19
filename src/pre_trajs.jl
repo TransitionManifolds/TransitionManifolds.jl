@@ -247,7 +247,8 @@ Only the `max_samples` closest trajectory points are considered for each anchor 
 
 The `max_dist` can either be given as a `Real`, in which case this value will be used for all anchors,
 or as a `Vector{Real}`, in which case `max_dist[l]` will be used for the `l`-th anchor.
-If no `max_dist` is provided, it uses half the average jump distance from the trajectories.
+If no `max_dist` is provided, a reasonable `max_dist[l]` of the `l`-th anchor is estimated as follows:
+half of the average jumping distance of the 10 closest trajectory points to the `l`-th anchor.
 
 All `anchors` that by the end have less than `min_samples` samples are removed (default: `min_samples=1`).
 
@@ -264,9 +265,6 @@ function preprocess(
     min_samples::Int=1,
     max_samples::Int=typemax(Int),
 )::PreprocessResult where {T<:Real}
-    # TODO: automatically guess a reasonable max_dist for each anchor
-    # by taking the mean_jump_dist of the k nearest neighbors
-
     # TODO: allow PreMetric or SemiMetric?
 
     # process `anchors`
@@ -286,18 +284,6 @@ function preprocess(
     n_anchors = size(anchors, 2)
     # at this point `anchors` is a (d, n_anchors) matrix
 
-    # process `max_dist`
-    if isnothing(max_dist)
-        max_dist = 0.5 * mean_jump_dist(data, dist)
-    end
-    if max_dist isa Real
-        max_dist = fill(max_dist, n_anchors)
-    end
-    length(max_dist) == n_anchors || throw(
-        ArgumentError("`max_dist` must have the same length as the number of anchors")
-    )
-    # at this point `max_dist` is a (n_anchors,) vector
-
     # store views of points while collecting the samples to reduce allocations.
     # at the end the views are converted to owned data.
     sample_view = data[1]
@@ -314,6 +300,9 @@ function preprocess(
         # offset - 1 is the last index of a trajectory
         distances[offset - 1, :] .= typemax(Float64)
     end
+
+    max_dist = set_max_dist(max_dist, n_anchors, data, distances, dist)
+    # at this point `max_dist` is a (n_anchors,) vector
 
     # find the matching samples
     for i in 1:n_anchors
@@ -353,6 +342,49 @@ function preprocess(
     return PreprocessResult(
         TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dist)
     )
+end
+
+# Convert the given `max_dist` into a Vector:
+# - if it is alreay a Vector: check length
+# - if it is a Real: return a Vector filled with that number
+# - if it is Nothing: estimate a reasonable max_dist for each anchor via half the average jump distance of
+#   the 10 closest trajectory points
+function set_max_dist(
+    max_dist::Union{Real,Vector{<:Real},Nothing},
+    n_anchors::Int,
+    trajs::Trajectories,
+    distances::AbstractMatrix{<:Real},
+    dist::Metric,
+)::Vector{<:Real}
+    if isnothing(max_dist)
+        k = 10
+        max_dist = Vector{Float64}(undef, n_anchors)
+        for i in 1:n_anchors
+            dcol = @view distances[:, i]
+            smallest_dist_idxs = partialsortperm(dcol, 1:min(2 * k, length(dcol)))
+
+            jump_dist = 0.0
+            n = 0
+            for idx in smallest_dist_idxs
+                if !is_endpoint(trajs, idx)
+                    jump_dist += dist(trajs[idx], trajs[idx + 1])
+                    n += 1
+                end
+                n == k && break
+            end
+            max_dist[i] = n > 0 ? jump_dist / n / 2 : 0.0
+        end
+        return max_dist
+    end
+
+    if max_dist isa Real
+        return fill(max_dist, n_anchors)
+    end
+
+    length(max_dist) == n_anchors || throw(
+        ArgumentError("`max_dist` must have the same length as the number of anchors")
+    )
+    return max_dist
 end
 
 # For `anchors` of shape (d, n_anchors) and `trajs` containing n_points points,
