@@ -16,9 +16,8 @@ struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
         new(bandwidth, blocksize)
     end
 end
-GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) = GaussianVStatMMD(
-    bandwidth, blocksize
-)
+GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) =
+    GaussianVStatMMD(bandwidth, blocksize)
 
 function compute_distances(
     prob::TransitionDistanceProblem, alg::GaussianVStatMMD; progress::Bool=false

@@ -283,9 +283,9 @@ end
 
 A [`TransitionDistanceResult`](@ref) `dres` can be provided instead of a distance matrix `distances`.
 """
-compute_embedding(dres::TransitionDistanceResult, alg::AbstractEmbeddingAlgorithm; kwargs...) = compute_embedding(
-    dres.distances, alg; kwargs...
-)
+compute_embedding(
+    dres::TransitionDistanceResult, alg::AbstractEmbeddingAlgorithm; kwargs...
+) = compute_embedding(dres.distances, alg; kwargs...)
 
 """
     compute_transition_manifold(prob::TransitionDistanceProblem, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; n_coordinates, progress::Bool=false) -> Tuple{TransitionDistanceResult,EmbeddingResult}
@@ -357,15 +357,18 @@ end
 
 A [`PreprocessResult`](@ref) `pres` can be provided directly instead of a [`TransitionDistanceProblem`](@ref).
 """
-compute_distances(pres::PreprocessResult, alg::AbstractTransitionDistanceAlgorithm; kwargs...) = compute_distances(
-    pres.prob, alg; kwargs...
-)
+compute_distances(
+    pres::PreprocessResult, alg::AbstractTransitionDistanceAlgorithm; kwargs...
+) = compute_distances(pres.prob, alg; kwargs...)
 
 """
     compute_transition_manifold(pres::PreprocessResult, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; kwargs...) -> Tuple{TransitionDistanceResult,EmbeddingResult}
 
 A [`PreprocessResult`](@ref) `pres` can be provided directly instead of a [`TransitionDistanceProblem`](@ref).
 """
-compute_transition_manifold(pres::PreprocessResult, distance_alg::AbstractTransitionDistanceAlgorithm, embedding_alg::AbstractEmbeddingAlgorithm; kwargs...) = compute_transition_manifold(
-    pres.prob, distance_alg, embedding_alg; kwargs...
-)
+compute_transition_manifold(
+    pres::PreprocessResult,
+    distance_alg::AbstractTransitionDistanceAlgorithm,
+    embedding_alg::AbstractEmbeddingAlgorithm;
+    kwargs...,
+) = compute_transition_manifold(pres.prob, distance_alg, embedding_alg; kwargs...)
