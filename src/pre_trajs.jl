@@ -288,26 +288,43 @@ function preprocess(
     )
     # at this point `max_dist` is a (n_anchors,) vector
 
-    # store views while collecting the samples to reduce allocations.
+    # store views of points while collecting the samples to reduce allocations.
     # at the end the views are converted to owned data.
-    sample_view = @view data.trajs[1][:, 1]
+    sample_view = data[1]
     V = typeof(sample_view)
     out = [V[] for _ in 1:n_anchors]
 
+    distances = Matrix{Float64}(undef, length(data), n_anchors)
+    next_idx = 1
     for traj in data.trajs
-        distances = pairwise(dist, @view(traj[:, 1:(end - 1)]), anchors; dims=2)
+        this_n_points = size(traj, 2)
+        @views pairwise!(
+            dist,
+            distances[next_idx:(next_idx + this_n_points - 2), :],
+            traj[:, 1:(end - 1)],
+            anchors;
+            dims=2,
+        )
+        # the end point of a trajectory is not valid
+        distances[next_idx + this_n_points - 1, :] .= typemax(Float64)
+        next_idx += this_n_points
+    end
 
-        for i in 1:n_anchors
-            dcol = @view distances[:, i]
-            valid_idxs = findall(<=(max_dist[i]), dcol)
-            n_valid = length(valid_idxs)
-            if n_valid > max_samples
-                partialsort!(valid_idxs, 1:max_samples; by=j -> dcol[j])
-                n_valid = max_samples
-            end
-            for j in @view valid_idxs[1:n_valid]
-                push!(out[i], @view traj[:, j + 1])
-            end
+    for i in 1:n_anchors
+        dcol = @view distances[:, i]
+        # because the end point of each trajectory has dcol=Inf,
+        # an end point is never valid
+        valid_idxs = findall(<=(max_dist[i]), dcol)
+        n_valid = length(valid_idxs)
+        if n_valid > max_samples
+            partialsort!(valid_idxs, 1:max_samples; by=j -> dcol[j])
+            n_valid = max_samples
+        end
+
+        sizehint!(out[i], n_valid)
+        for j in @view valid_idxs[1:n_valid]
+            # for each valid j, push the successor j+1
+            push!(out[i], data[j + 1])
         end
     end
 
