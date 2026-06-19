@@ -68,6 +68,18 @@ Base.firstindex(::Trajectories) = 1
 Base.lastindex(trajs::Trajectories) = trajs.n_points
 
 """
+    is_endpoint(trajs::Trajectories, i::Int) -> Bool
+
+Whether `trajs[i]` is the endpoint of a trajectory.
+
+If `is_endpoint(trajs, i)` is true, then `trajs[i+1]` is the startpoint of the next trajectory.
+"""
+function is_endpoint(trajs::Trajectories, i::Int)::Bool
+    1 <= i <= trajs.n_points || throw(BoundsError(trajs, i))
+    return insorted(i + 1, trajs.offsets)
+end
+
+"""
     sample_points(trajs::Trajectories{T}, k::Int) -> Matrix{T}
 
 Sample `k` random points from `trajs`, excluding the end points.

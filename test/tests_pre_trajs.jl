@@ -71,6 +71,18 @@
         @test_throws BoundsError trajs[13]
     end
 
+    @testset "is_endpoint" begin
+        t1 = rand(2, 3)
+        t2 = rand(2, 5)
+        t3 = rand(2, 4)
+        trajs = Trajectories([t1, t2, t3])
+
+        isend = [is_endpoint(trajs, i) for i in 1:length(trajs)]
+        expected = fill(false, 12)
+        expected[[3, 8, 12]] .= true
+        @test isend == expected
+    end
+
     @testset "sample_points" begin
         t1 = rand(3, 10)
         t2 = rand(3, 5)

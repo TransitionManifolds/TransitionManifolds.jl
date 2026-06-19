@@ -30,7 +30,7 @@ include("em_diffusion_maps.jl")
 export DiffusionMaps
 
 include("pre_trajs.jl")
-export Trajectories
+export Trajectories, is_endpoint
 export sample_points, farthest_point_sampling, FarthestPointSamplingResult
 
 end # module TransitionManifolds

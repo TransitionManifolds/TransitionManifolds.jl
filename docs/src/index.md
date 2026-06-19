@@ -95,6 +95,10 @@ Trajectories
 ```
 
 ```@docs
+is_endpoint
+```
+
+```@docs
 sample_points
 ```
 
