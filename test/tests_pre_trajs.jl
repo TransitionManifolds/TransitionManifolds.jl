@@ -121,6 +121,24 @@
         end
     end
 
+    @testset "anchor_trajs_distances" begin
+        trajs = Trajectories([
+            hcat([0, 2], [0, 1], [0, 0.25], [0, 0]), hcat([0, -0.5], [0, -1.5], [0, -2])
+        ])
+        anchors = hcat([0, 1.5], [0, 0])
+        expected = [
+            0.5 2
+            0.5 1
+            1.25 0.25
+            1.5 0
+            2 0.5
+            3 1.5
+            3.5 2
+        ]
+        @test TransitionManifolds.anchor_trajs_distances(anchors, trajs, Euclidean()) ≈
+            expected
+    end
+
     @testset "preprocess" begin
         @testset "correct samples 1 traj" begin
             trajs = Trajectories(

@@ -255,9 +255,7 @@ function preprocess(
     # TODO: automatically guess a reasonable max_dist for each anchor
     # by taking the mean_jump_dist of the k nearest neighbors
 
-    # NOTE: if we construct a BallTree anyway for finding the nearest neighbors,
-    # it can be used to speed up finding close points,
-    # see `inrange` of NearestNeighbours.jl
+    # TODO: allow PreMetric or SemiMetric?
 
     # process `anchors`
     if isnothing(anchors)
@@ -294,22 +292,18 @@ function preprocess(
     V = typeof(sample_view)
     out = [V[] for _ in 1:n_anchors]
 
-    distances = Matrix{Float64}(undef, length(data), n_anchors)
-    next_idx = 1
-    for traj in data.trajs
-        this_n_points = size(traj, 2)
-        @views pairwise!(
-            dist,
-            distances[next_idx:(next_idx + this_n_points - 2), :],
-            traj[:, 1:(end - 1)],
-            anchors;
-            dims=2,
-        )
-        # the end point of a trajectory is not valid
-        distances[next_idx + this_n_points - 1, :] .= typemax(Float64)
-        next_idx += this_n_points
+    # compute distances between anchors and trajs
+    # TODO: Switch dims of distances?
+    # Currently, it is the wrong way around during construction in anchor_trajs_distances,
+    # but the correct way around for accessing dcol later.
+    distances = anchor_trajs_distances(anchors, data, dist)
+    # the end point of a trajectory is not valid
+    for offset in @view(data.offsets[2:end])
+        # offset - 1 is the last index of a trajectory
+        distances[offset - 1, :] .= typemax(Float64)
     end
 
+    # find the matching samples
     for i in 1:n_anchors
         dcol = @view distances[:, i]
         # because the end point of each trajectory has dcol=Inf,
@@ -347,4 +341,21 @@ function preprocess(
     return PreprocessResult(
         TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dist)
     )
+end
+
+# For `anchors` of shape (d, n_anchors) and `trajs` containing n_points points,
+# compute the (n_points, n_anchors) pairwise distance matrix.
+function anchor_trajs_distances(
+    anchors::AbstractMatrix{T}, trajs::Trajectories{T}, dist::Metric
+)::Matrix{Float64} where {T<:Real}
+    n_anchors = size(anchors, 2)
+    distances = Matrix{Float64}(undef, length(trajs), n_anchors)
+
+    for (i, traj) in enumerate(trajs.trajs)
+        start_idx = trajs.offsets[i]
+        end_idx = trajs.offsets[i + 1] - 1
+        @views pairwise!(dist, distances[start_idx:end_idx, :], traj, anchors; dims=2)
+    end
+
+    return distances
 end
