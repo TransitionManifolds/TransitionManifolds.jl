@@ -308,9 +308,6 @@
             data = Trajectories(traj)
             res = preprocess(data)
             @test size(res.info["anchors"]) == (2, 5)
-            # TODO: test for max_dist
-            # @test res.info["max_dist"] ≈
-            #     fill(0.5 * TransitionManifolds.mean_jump_dist(data, Euclidean()), 5)
         end
 
         @testset "all empty" begin
@@ -395,6 +392,20 @@
             expected_out = hcat(traj1[:, 2:end], traj2[:, 2:end])
             @test out[3] == expected_out
             @test out[4] == expected_out
+        end
+
+        @testset "max_dist automatic" begin
+            traj1 = stack([[i, 0.0] for i in 0:-1:-20])
+            traj2 = stack([[i, 0.0] for i in 0:2:40])
+            data = Trajectories([traj1, traj2])
+            anchors = stack([[-10, 0.0], [20, 0.0], [0, 0.0]])
+            res = preprocess(data; anchors=anchors)
+            max_dist = res.info["max_dist"]
+
+            @test length(max_dist) == 3
+            @test max_dist[1] ≈ 0.5 * 1.0  # the 10 closest jumps are all in traj1 with jump size 1
+            @test max_dist[2] ≈ 0.5 * 2.0  # the 10 closest jumps are all in traj2 with jump size 2
+            @test max_dist[3] ≈ 0.5 * (7 * 1.0 + 3 * 2.0) / 10  # 7 of the 10 closest jumps are in traj1 and 3 in traj2
         end
     end
 end
