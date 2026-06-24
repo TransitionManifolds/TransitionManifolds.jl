@@ -128,7 +128,39 @@ TransitionDistanceProblem(data; weights=nothing) = TransitionDistanceProblem(dat
 
 Layout of `prob`; either [`Contiguous`](@ref) or [`Jagged`](@ref).
 """
-layout(::TransitionDistanceProblem{T,W,L}) where {T,W,L} = L
+layout(::TransitionDistanceProblem{<:Any,<:Any,L}) where {L} = L
+
+"""
+    n_anchors(prob::TransitionDistanceProblem) -> Int
+
+The number of anchors in `prob`.
+"""
+n_anchors(prob::TransitionDistanceProblem{<:Any,<:Any,Contiguous}) = size(prob.data, 3)
+n_anchors(prob::TransitionDistanceProblem{<:Any,<:Any,Jagged}) = length(prob.data)
+
+"""
+    n_samples(prob::TransitionDistanceProblem{T,W,Contiguous}) -> Int
+
+The number of samples for each anchor in `prob` with `Contiguous` layout.
+"""
+n_samples(prob::TransitionDistanceProblem{<:Any,<:Any,Contiguous}) = size(prob.data, 2)
+
+"""
+    n_samples(prob::TransitionDistanceProblem{T,W,Jagged}) -> Vector{Int}
+
+The number of samples for each anchor in `prob` with `Jagged` layout.
+The `i`-th element gives the number of samples for the `i`-th anchor.
+"""
+n_samples(prob::TransitionDistanceProblem{<:Any,<:Any,Jagged}) =
+    [size(x, 2) for x in prob.data]
+
+"""
+    dimension(prob::TransitionDistanceProblem) -> Int
+
+The dimension `d` of `prob`.
+"""
+dimension(prob::TransitionDistanceProblem{<:Any,<:Any,Contiguous}) = size(prob.data, 1)
+dimension(prob::TransitionDistanceProblem{<:Any,<:Any,Jagged}) = size(prob.data[1], 1)
 
 """
     cat_anchors(probs::TransitionDistanceProblem{T,W,Contiguous}...) -> TransitionDistanceProblem{T,W,Contiguous}

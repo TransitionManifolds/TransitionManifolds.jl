@@ -5,6 +5,10 @@
         @test p isa TransitionDistanceProblem{Float64,Nothing,Contiguous}
         @test p.data === x
         @test isnothing(p.weights)
+        @test n_anchors(p) == 2
+        @test n_samples(p) == 3
+        @test dimension(p) == 4
+        @test layout(p) === Contiguous
     end
 
     @testset "Jagged" begin
@@ -13,6 +17,10 @@
         @test p isa TransitionDistanceProblem{Float64,Nothing,Jagged}
         @test p.data === x
         @test isnothing(p.weights)
+        @test n_anchors(p) == 2
+        @test n_samples(p) == [3, 5]
+        @test dimension(p) == 4
+        @test layout(p) === Jagged
     end
 
     @testset "weights Contiguous" begin
@@ -22,6 +30,10 @@
         @test p isa TransitionDistanceProblem{Float64,Float64,Contiguous}
         @test p.data === x
         @test p.weights === w
+        @test n_anchors(p) == 2
+        @test n_samples(p) == 3
+        @test dimension(p) == 4
+        @test layout(p) === Contiguous
     end
 
     @testset "weights Jagged" begin
@@ -31,6 +43,10 @@
         @test p isa TransitionDistanceProblem{Float64,Float64,Jagged}
         @test p.data === x
         @test p.weights === w
+        @test n_anchors(p) == 2
+        @test n_samples(p) == [3, 5]
+        @test dimension(p) == 4
+        @test layout(p) === Jagged
     end
 
     @testset "T and W Contiguous" begin

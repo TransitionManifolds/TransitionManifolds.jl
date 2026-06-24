@@ -27,6 +27,18 @@ layout
 ```
 
 ```@docs
+n_anchors
+```
+
+```@docs
+n_samples
+```
+
+```@docs
+dimension
+```
+
+```@docs
 compute_distances
 ```
 

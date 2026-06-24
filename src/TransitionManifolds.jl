@@ -11,7 +11,8 @@ using ProgressMeter: Progress, next!
 # ------------- include files -----------------
 include("interface.jl")
 export AbstractDataLayout, Contiguous, Jagged, layout
-export TransitionDistanceProblem, cat_anchors, append_anchors!
+export TransitionDistanceProblem, n_anchors, n_samples, dimension
+export cat_anchors, append_anchors!
 export AbstractTransitionDistanceAlgorithm, TransitionDistanceResult, compute_distances
 export AbstractEmbeddingAlgorithm, EmbeddingResult, compute_embedding
 export compute_transition_manifold
