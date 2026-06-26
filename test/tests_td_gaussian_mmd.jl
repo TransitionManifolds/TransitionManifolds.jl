@@ -117,3 +117,27 @@
         end
     end
 end
+
+# TODO: tests
+@testset "GaussianVStatMMD" begin
+    @testset "compute_distances" begin
+        @testset "output" begin
+            alg = GaussianVStatMMD(; bandwidth=0.123)
+            x = rand(Float64, 2, 4, 3)
+            x_j = [rand(2, 4), rand(2, 3), rand(2, 2)]
+            prob = TransitionDistanceProblem(x)
+            prob_j = TransitionDistanceProblem(x_j)
+
+            @testset "$(layout(p))" for p in [prob, prob_j]
+                res = compute_distances(p, alg)
+
+                @test size(res.distances) == (3, 3)
+                @test issymmetric(res.distances)
+                @test all(diag(res.distances) .== 0)
+
+                @test res.info["bandwidth"] == 0.123
+                @test res.info["elapsed"] > 0
+            end
+        end
+    end
+end

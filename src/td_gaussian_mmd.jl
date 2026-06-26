@@ -129,6 +129,7 @@ function kernel_eval(
 end
 
 # ---------------- GaussianVStatMMD ---------------------------
+# TODO: docstring
 """
     GaussianVStatMMD(...) <: AbstractTransitionDistanceAlgorithm
 
@@ -149,10 +150,45 @@ end
 GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) =
     GaussianVStatMMD(bandwidth, blocksize)
 
+# TODO: docstring
 function compute_distances(
-    prob::TransitionDistanceProblem, alg::GaussianVStatMMD; progress::Bool=false
-)::TransitionDistanceResult
-    # TODO: implement!
+    prob::TransitionDistanceProblem{T,Nothing,Jagged},
+    alg::GaussianVStatMMD;
+    progress::Bool=false,
+)::TransitionDistanceResult where {T<:AbstractFloat}
+    data = prob.data
 
-    error("Not implemented yet!")
+    # automatic bandwidth selection
+    if isnothing(alg.bandwidth)
+        subsamples = subsamples_from_jagged(data, 100)
+        bandwidth = tune_bandwidth_gaussian(subsamples)
+        alg = GaussianVStatMMD(bandwidth, alg.blocksize)
+    end
+
+    t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
+    t2 = @elapsed convert_kernel_to_distance_matrix!(D)
+    return TransitionDistanceResult(
+        D, Dict("bandwidth" => alg.bandwidth, "elapsed" => t1 + t2)
+    )
+end
+
+# TODO: implementation for Contiguous using blocks
+
+# TODO: casting
+
+# Estimate E[k(X, Y)] from samples x and y.
+# x has shape (d, n) and y has shape (d, m).
+function kernel_eval(
+    x::AbstractMatrix{T}, y::AbstractMatrix{T}, alg::GaussianVStatMMD
+)::T where {T<:AbstractFloat}
+    inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
+    dist_sq = pairwise(SqEuclidean(), x, y)
+    dist_sq .= exp.(inv_sigma_sq .* dist_sq)
+    return mean(dist_sq)
+end
+
+function kernel_eval(
+    x::AbstractMatrix{T}, alg::GaussianVStatMMD
+)::T where {T<:AbstractFloat}
+    kernel_eval(x, x, alg)
 end
