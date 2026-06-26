@@ -1,32 +1,3 @@
-# ---------------- GaussianVStatMMD ---------------------------
-"""
-    GaussianVStatMMD(...) <: AbstractTransitionDistanceAlgorithm
-
-Not implemented yet!
-"""
-struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
-    bandwidth::Union{Float64,Nothing}
-    blocksize::Int
-
-    function GaussianVStatMMD(bandwidth::Union{Real,Nothing}, blocksize::Integer)
-        isnothing(bandwidth) ||
-            bandwidth > 0 ||
-            throw(ArgumentError("bandwidth has to be > 0"))
-        blocksize > 0 || throw(ArgumentError("blocksize has to be > 0"))
-        new(bandwidth, blocksize)
-    end
-end
-GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) =
-    GaussianVStatMMD(bandwidth, blocksize)
-
-function compute_distances(
-    prob::TransitionDistanceProblem, alg::GaussianVStatMMD; progress::Bool=false
-)::TransitionDistanceResult
-    # TODO: implement!
-
-    error("Not implemented yet!")
-end
-
 # ---------------- GaussianDStatMMD ---------------------------
 
 """
@@ -155,4 +126,33 @@ function kernel_eval(
         out += exp(dist_sq * inv_sigma_sq)
     end
     return out / (n - 1)
+end
+
+# ---------------- GaussianVStatMMD ---------------------------
+"""
+    GaussianVStatMMD(...) <: AbstractTransitionDistanceAlgorithm
+
+Not implemented yet!
+"""
+struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
+    bandwidth::Union{Float64,Nothing}
+    blocksize::Int
+
+    function GaussianVStatMMD(bandwidth::Union{Real,Nothing}, blocksize::Integer)
+        isnothing(bandwidth) ||
+            bandwidth > 0 ||
+            throw(ArgumentError("bandwidth has to be > 0"))
+        blocksize > 0 || throw(ArgumentError("blocksize has to be > 0"))
+        new(bandwidth, blocksize)
+    end
+end
+GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) =
+    GaussianVStatMMD(bandwidth, blocksize)
+
+function compute_distances(
+    prob::TransitionDistanceProblem, alg::GaussianVStatMMD; progress::Bool=false
+)::TransitionDistanceResult
+    # TODO: implement!
+
+    error("Not implemented yet!")
 end
