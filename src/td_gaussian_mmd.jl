@@ -52,7 +52,7 @@ function compute_distances(
 
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
-        subsamples = subsamples_from_jagged(data, 100)
+        subsamples = subsamples_from_data(data, 100)
         bandwidth = tune_bandwidth_gaussian(subsamples)
         alg = GaussianDStatMMD(bandwidth)
     end
@@ -160,8 +160,7 @@ function compute_distances(
 
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
-        # BUG: subsamples from contiguous
-        subsamples = subsamples_from_jagged(data, 100)
+        subsamples = subsamples_from_data(data, 100)
         bandwidth = tune_bandwidth_gaussian(subsamples)
         alg = GaussianVStatMMD(bandwidth, alg.blocksize)
     end

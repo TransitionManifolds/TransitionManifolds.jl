@@ -49,17 +49,33 @@ end
     @test K == D
 end
 
-@testset "subsamples_from_jagged" begin
-    @testset "sufficient data" begin
-        data = [rand(3, 6), rand(3, 4)]
-        subsamples = TransitionManifolds.subsamples_from_jagged(data, 4)
-        @test size(subsamples) == (3, 4)
+@testset "subsamples_from_data" begin
+    @testset "jagged" begin
+        @testset "sufficient data" begin
+            data = [rand(3, 6), rand(3, 4)]
+            subsamples = TransitionManifolds.subsamples_from_data(data, 4)
+            @test size(subsamples) == (3, 4)
+        end
+
+        @testset "insufficient data" begin
+            data = [rand(3, 2), rand(3, 3)]
+            subsamples = TransitionManifolds.subsamples_from_data(data, 10)
+            @test size(subsamples) == (3, 5)
+        end
     end
 
-    @testset "insufficient data" begin
-        data = [rand(3, 2), rand(3, 3)]
-        subsamples = TransitionManifolds.subsamples_from_jagged(data, 10)
-        @test size(subsamples) == (3, 5)
+    @testset "contiguous" begin
+        @testset "sufficient data" begin
+            data = rand(3, 4, 5)
+            subsamples = TransitionManifolds.subsamples_from_data(data, 4)
+            @test size(subsamples) == (3, 4)
+        end
+
+        @testset "insufficient data" begin
+            data = rand(3, 2, 3)
+            subsamples = TransitionManifolds.subsamples_from_data(data, 10)
+            @test size(subsamples) == (3, 6)
+        end
     end
 end
 

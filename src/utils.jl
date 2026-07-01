@@ -69,15 +69,15 @@ function convert_kernel_to_distance_matrix!(K::AbstractMatrix{T}) where {T<:Real
 end
 
 """
-    subsamples_from_jagged(data::Vector{Matrix}, n_samples) -> Matrix
+    subsamples_from_data(data, n_samples) -> Matrix
 
-Generate `n_samples` random samples from jagged `data`.
+Generate `n_samples` random samples from jagged or contiguous `data`.
 
 The output is a `(d, n_samples)` matrix.
 If there are less than `n_samples` data points in `data`, the output will
 contain only all data points, i.e., will have less than `n_samples` columns.
 """
-function subsamples_from_jagged(
+function subsamples_from_data(
     data::JaggedData{T}, n_samples::Int
 )::AbstractArray{T,2} where {T}
     # create a vector of column views containing all data points
@@ -85,6 +85,14 @@ function subsamples_from_jagged(
 
     n_samples = min(n_samples, length(all_cols))
     return stack(sample(all_cols, n_samples; replace=false))
+end
+
+function subsamples_from_data(
+    data::ContiguousData{T}, n_samples::Int
+)::AbstractArray{T,2} where {T}
+    all_slices = eachslice(data; dims=(2, 3))
+    n_samples = min(n_samples, length(all_slices))
+    return stack(sample(all_slices, n_samples; replace=false))
 end
 
 """
