@@ -129,11 +129,31 @@ function kernel_eval(
 end
 
 # ---------------- GaussianVStatMMD ---------------------------
-# TODO: docstring
 """
-    GaussianVStatMMD(...) <: AbstractTransitionDistanceAlgorithm
+    GaussianVStatMMD(bandwidth=nothing, blocksize=20) <: AbstractTransitionDistanceAlgorithm
 
-Not implemented yet!
+Struct for using the maximum mean discrepancy (MMD) with a Gaussian kernel
+and V-Statistic estimation to compute the transition density distances.
+
+The MMD between random variables ``X`` and ``Y`` is given by
+
+```math
+E[k(X, X')] + E[k(Y, Y')] - 2 E[k(X, Y)].
+```
+
+Here, ``k`` is a Gaussian kernel:
+``k(x, y) := exp(-||x - y||^2 / σ^2)``
+where ``σ`` is called the `bandwidth`.
+The V-Statistic is used to estimate the above expected values from samples.
+The computational cost is quadratic in the number of samples.
+For a less accurate estimator that scales linearly in the number of samples,
+see [`GaussianDStatMMD`](@ref).
+
+The `bandwidth` is either a number > 0 or `nothing`, in which case a reasonable bandwidth is chosen automatically based on the samples.
+
+For data in [`Contiguous`](@ref) layout, an efficient implementation using blockwise matrix multiplications is employed.
+The `blocksize` controls how many anchors are processed in one block.
+For data in [`Jagged`](@ref) layout, the `blocksize` has no effect.
 """
 struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
     bandwidth::Union{Float64,Nothing}
@@ -150,7 +170,15 @@ end
 GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) =
     GaussianVStatMMD(bandwidth, blocksize)
 
-# TODO: docstring
+"""
+    compute_distances(prob, alg::GaussianVStatMMD; kwargs...) -> TransitionDistanceResult
+
+The [`GaussianVStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Weighted samples are not supported.
+The `res.info` dictionary contains
+
+  - `res.info["elapsed"]`: the elapsed time
+  - `res.info["bandwidth"]`: the used bandwidth
+"""
 function compute_distances(
     prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
     alg::GaussianVStatMMD;
