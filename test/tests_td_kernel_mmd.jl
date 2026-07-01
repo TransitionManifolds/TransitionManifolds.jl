@@ -172,6 +172,15 @@ end
             @test dmat[1, 2] < 0.01
         end
 
-        # TODO: Compare to GaussianVStatMMD
+        @testset "compare to GaussianVStatMMD" begin
+            alg1 = KernelVStatMMD(kernel)
+            alg2 = GaussianVStatMMD(; bandwidth=bandwidth)
+            seed!(1234)
+            x = rand(3, 100, 10)
+
+            D1 = compute_distances(x, alg1).distances
+            D2 = compute_distances(x, alg2).distances
+            @test D1 ≈ D2
+        end
     end
 end
