@@ -118,7 +118,6 @@
     end
 end
 
-# TODO: tests
 @testset "GaussianVStatMMD" begin
     @testset "compute_distances" begin
         @testset "output" begin
@@ -154,6 +153,70 @@ end
                 alg = GaussianVStatMMD(; bandwidth=0.123, blocksize=b)
                 res = compute_distances(prob, alg)
                 @test res.distances ≈ expected
+            end
+        end
+
+        @testset "types" begin
+            alg = GaussianVStatMMD(; bandwidth=1, blocksize=1)
+            types = [Float64, Float32, Float16]
+
+            @testset "$t" for t in types
+                @testset "Contiguous" begin
+                    x = rand(t, 2, 4, 3)
+                    @test typeof(compute_distances(x, alg).distances) == Array{t,2}
+                end
+
+                @testset "Jagged" begin
+                    x = [rand(t, 2, 4), rand(t, 2, 3), rand(t, 2, 2)]
+                    @test typeof(compute_distances(x, alg).distances) == Array{t,2}
+                end
+            end
+        end
+
+        @testset "cast" begin
+            alg = GaussianVStatMMD(; bandwidth=1, blocksize=1)
+            types = [Int64, Int32, UInt32]
+
+            @testset "$t" for t in types
+                @testset "Contiguous" begin
+                    x = rand(t, 2, 4, 3)
+                    res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
+                    @test typeof(res.distances) == Array{Float32,2}
+                end
+
+                @testset "Jagged" begin
+                    x = [rand(t, 2, 4), rand(t, 2, 3), rand(t, 2, 2)]
+                    res = @test_logs (:info, r"Casting data") compute_distances(x, alg)
+                    @test typeof(res.distances) == Array{Float32,2}
+                end
+            end
+        end
+
+        @testset "convergence to 0" begin
+            alg = GaussianVStatMMD(bandwidth=0.3)
+            seed!(1234)
+            x = rand(2, 2000, 2)
+
+            dmat = compute_distances(x, alg).distances
+            @test dmat[1, 1] == 0
+            @test dmat[2, 2] == 0
+            @test dmat[1, 2] == dmat[2, 1]
+            @test dmat[1, 2] < 0.001
+        end
+
+        @testset "automatic bandwidth" begin
+            @testset "Contiguous" begin
+                alg = GaussianVStatMMD()
+                x = rand(Float64, 2, 100, 3)
+                res = compute_distances(x, alg)
+                @test res.info["bandwidth"] > 0
+            end
+
+            @testset "Jagged" begin
+                alg = GaussianVStatMMD()
+                x = [rand(2, 100), rand(2, 200), rand(2, 50)]
+                res = compute_distances(x, alg)
+                @test res.info["bandwidth"] > 0
             end
         end
     end
