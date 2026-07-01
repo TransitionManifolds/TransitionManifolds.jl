@@ -152,7 +152,7 @@ GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20
 
 # TODO: docstring
 function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,<:Any},
+    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
     alg::GaussianVStatMMD;
     progress::Bool=false,
 )::TransitionDistanceResult where {T<:AbstractFloat}
@@ -256,7 +256,14 @@ function compute_kernel_matrix(
     return K
 end
 
-# TODO: casting
+# This implementation casts integers to Float32. Floats are handled above.
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout}, alg::GaussianVStatMMD; kwargs...
+)::TransitionDistanceResult where {T<:Real}
+    @info "Casting data from $T to Float32 for distance computation"
+    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
+    return compute_distances(prob, alg; kwargs...)
+end
 
 # Estimate E[k(X, Y)] from samples x and y.
 # x has shape (d, n) and y has shape (d, m).
