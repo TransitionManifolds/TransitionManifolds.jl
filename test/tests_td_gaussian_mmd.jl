@@ -139,5 +139,22 @@ end
                 @test res.info["elapsed"] > 0
             end
         end
+
+        @testset "blocksize" begin
+            # test same result for different blocksizes
+            alg = GaussianVStatMMD(; bandwidth=0.123)
+            x = rand(Float64, 2, 5, 20)
+            prob = TransitionDistanceProblem(x)
+            blocksizes = [2, 3, 19, 20, 50]
+
+            alg = GaussianVStatMMD(; bandwidth=0.123, blocksize=1)
+            expected = compute_distances(prob, alg).distances
+
+            @testset "blocksize $b" for b in blocksizes
+                alg = GaussianVStatMMD(; bandwidth=0.123, blocksize=b)
+                res = compute_distances(prob, alg)
+                @test res.distances ≈ expected
+            end
+        end
     end
 end

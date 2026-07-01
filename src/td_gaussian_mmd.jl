@@ -152,7 +152,7 @@ GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20
 
 # TODO: docstring
 function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,Jagged},
+    prob::TransitionDistanceProblem{T,Nothing,<:Any},
     alg::GaussianVStatMMD;
     progress::Bool=false,
 )::TransitionDistanceResult where {T<:AbstractFloat}
@@ -160,19 +160,102 @@ function compute_distances(
 
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
+        # BUG: subsamples from contiguous
         subsamples = subsamples_from_jagged(data, 100)
         bandwidth = tune_bandwidth_gaussian(subsamples)
         alg = GaussianVStatMMD(bandwidth, alg.blocksize)
     end
 
+    # For jagged layout, `compute_kernel_matrix` uses the standard method from `utils.jl`.
+    # For contigous layout, there is a special implementation below.
     t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
+
     t2 = @elapsed convert_kernel_to_distance_matrix!(D)
     return TransitionDistanceResult(
         D, Dict("bandwidth" => alg.bandwidth, "elapsed" => t1 + t2)
     )
 end
 
-# TODO: implementation for Contiguous using blocks
+# VStat + Contiguous: blockwise computation 
+function compute_kernel_matrix(
+    data::ContiguousData{T}, alg::GaussianVStatMMD; progress::Bool=false
+)::Matrix{T} where {T<:AbstractFloat}
+    dim, n_samples, n_anchors = size(data)
+    total_points = n_samples * n_anchors
+    inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
+    K = zeros(T, n_anchors, n_anchors)
+
+    blocksize = min(alg.blocksize, n_anchors)
+    while n_anchors % blocksize != 0
+        blocksize -= 1
+    end
+
+    # We need ||x||^2 for the distance expansion ||x-y||^2 = ||x||^2 + ||y||^2 - 2<x,y>
+    # compute norm once for entire dataset
+    x_flat = reshape(data, (dim, total_points))
+    norms_sq = sum(abs2, x_flat; dims=1) # (1, total_points)
+
+    # set BLAS threads for manual threading
+    blas_threads_before = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
+
+    n_iter = div(n_anchors, blocksize)
+    pbar = Progress(
+        (binomial(n_iter, 2) + n_iter) * blocksize * blocksize;
+        enabled=progress,
+        showspeed=true,
+        desc="Computing Kernel Matrix:",
+    )
+
+    Threads.@threads for i_start in 1:blocksize:n_anchors
+        i_end = i_start + blocksize - 1
+
+        idx_start_i = (i_start - 1) * n_samples + 1
+        idx_end_i = i_end * n_samples
+
+        buffer = zeros(T, n_samples * blocksize, n_samples * blocksize)
+
+        # shape: (dim, blocksize * samples)
+        Xi = view(x_flat, :, idx_start_i:idx_end_i)
+        norms_i = view(norms_sq, :, idx_start_i:idx_end_i)
+
+        for j_start in i_start:blocksize:n_anchors
+            j_end = j_start + blocksize - 1
+
+            idx_start_j = (j_start - 1) * n_samples + 1
+            idx_end_j = j_end * n_samples
+
+            Xj = view(x_flat, :, idx_start_j:idx_end_j)
+            norms_j = view(norms_sq, :, idx_start_j:idx_end_j)
+
+            # (Samples*blocksize x dim) * (dim x Samples*blocksize) => (Samples*blocksize) x (Samples*blocksize)
+            # This consumes the dim in the dot product summation
+            mul!(buffer, Xi', Xj)
+
+            # ||x||^2 + ||y||^2 - 2<x,y> and kernel
+            @tullio buffer[i, j] = exp(
+                (norms_i[1, i] + norms_j[1, j] - T(2) * buffer[i, j]) * inv_sigma_sq
+            ) (threads = false)
+
+            # reshape to separate anchors
+            this_K = reshape(buffer, (n_samples, blocksize, n_samples, blocksize))
+
+            # sum sub-blocks of size (samples x samples)
+            @tullio result_tile[i, j] := this_K[s1, i, s2, j] (threads = false)
+
+            K[i_start:i_end, j_start:j_end] = result_tile
+            next!(
+                pbar;
+                step=length(result_tile),
+                showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")],
+            )
+        end
+    end
+
+    BLAS.set_num_threads(blas_threads_before)
+    K ./= n_samples^2
+    return K
+end
 
 # TODO: casting
 
@@ -182,7 +265,7 @@ function kernel_eval(
     x::AbstractMatrix{T}, y::AbstractMatrix{T}, alg::GaussianVStatMMD
 )::T where {T<:AbstractFloat}
     inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
-    dist_sq = pairwise(SqEuclidean(), x, y)
+    dist_sq = pairwise(SqEuclidean(), x, y; dims=2)
     dist_sq .= exp.(inv_sigma_sq .* dist_sq)
     return mean(dist_sq)
 end
