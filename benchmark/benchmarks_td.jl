@@ -69,4 +69,50 @@ SUITE["KernelDStatMMD"]["Small_Float32"] = @benchmarkable compute_distances(
     $x_small_32, $alg
 )
 
+# --------- GaussianVStatMMD ---------
+SUITE["GaussianVStatMMD"] = BenchmarkGroup()
+
+alg = GaussianVStatMMD(; bandwidth=sqrt(d_big / 2.0))
+SUITE["GaussianVStatMMD"]["Big_Float64"] = @benchmarkable compute_distances($x_big_64, $alg)
+SUITE["GaussianVStatMMD"]["Big_Float32"] = @benchmarkable compute_distances($x_big_32, $alg)
+
+alg = GaussianVStatMMD(; bandwidth=sqrt(d_medium / 2.0))
+SUITE["GaussianVStatMMD"]["Medium_Float64"] = @benchmarkable compute_distances(
+    $x_medium_64, $alg
+)
+SUITE["GaussianVStatMMD"]["Medium_Float32"] = @benchmarkable compute_distances(
+    $x_medium_32, $alg
+)
+
+alg = GaussianVStatMMD(; bandwidth=sqrt(d_small / 2.0))
+SUITE["GaussianVStatMMD"]["Small_Float64"] = @benchmarkable compute_distances(
+    $x_small_64, $alg
+)
+SUITE["GaussianVStatMMD"]["Small_Float32"] = @benchmarkable compute_distances(
+    $x_small_32, $alg
+)
+
+# --------- KernelVStatMMD ---------
+SUITE["KernelVStatMMD"] = BenchmarkGroup()
+
+alg = KernelVStatMMD(gaussian_kernel(sqrt(d_big / 2.0)))
+SUITE["KernelVStatMMD"]["Big_Float64"] = @benchmarkable compute_distances($x_big_64, $alg)
+SUITE["KernelVStatMMD"]["Big_Float32"] = @benchmarkable compute_distances($x_big_32, $alg)
+
+alg = KernelVStatMMD(gaussian_kernel(sqrt(d_medium / 2.0)))
+SUITE["KernelVStatMMD"]["Medium_Float64"] = @benchmarkable compute_distances(
+    $x_medium_64, $alg
+)
+SUITE["KernelVStatMMD"]["Medium_Float32"] = @benchmarkable compute_distances(
+    $x_medium_32, $alg
+)
+
+alg = KernelVStatMMD(gaussian_kernel(sqrt(d_small / 2.0)))
+SUITE["KernelVStatMMD"]["Small_Float64"] = @benchmarkable compute_distances(
+    $x_small_64, $alg
+)
+SUITE["KernelVStatMMD"]["Small_Float32"] = @benchmarkable compute_distances(
+    $x_small_32, $alg
+)
+
 end
