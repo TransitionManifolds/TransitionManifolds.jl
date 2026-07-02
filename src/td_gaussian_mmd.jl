@@ -130,7 +130,7 @@ end
 
 # ---------------- GaussianVStatMMD ---------------------------
 """
-    GaussianVStatMMD(bandwidth=nothing, blocksize=20) <: AbstractTransitionDistanceAlgorithm
+    GaussianVStatMMD(bandwidth=nothing, blocksize=4) <: AbstractTransitionDistanceAlgorithm
 
 Struct for using the maximum mean discrepancy (MMD) with a Gaussian kernel
 and V-Statistic estimation to compute the transition density distances.
@@ -152,7 +152,8 @@ see [`GaussianDStatMMD`](@ref).
 The `bandwidth` is either a number > 0 or `nothing`, in which case a reasonable bandwidth is chosen automatically based on the samples.
 
 For data in [`Contiguous`](@ref) layout, an efficient implementation using blockwise matrix multiplications is employed.
-The `blocksize` controls how many anchors are processed in one block.
+The `blocksize` controls how many anchors are processed in one block, e.g.,
+for the default `blocksize=4` the method computes ``4*4=16`` anchor pairs at once.
 For data in [`Jagged`](@ref) layout, the `blocksize` has no effect.
 """
 struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
@@ -234,7 +235,7 @@ function compute_kernel_matrix(
         desc="Computing Kernel Matrix:",
     )
 
-    Threads.@threads for i_start in 1:blocksize:n_anchors
+    Threads.@threads :greedy for i_start in 1:blocksize:n_anchors
         i_end = i_start + blocksize - 1
 
         idx_start_i = (i_start - 1) * n_samples + 1
@@ -286,7 +287,9 @@ end
 
 # This implementation casts integers to Float32. Floats are handled above.
 function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout}, alg::GaussianVStatMMD; kwargs...
+    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
+    alg::GaussianVStatMMD;
+    kwargs...,
 )::TransitionDistanceResult where {T<:Real}
     @info "Casting data from $T to Float32 for distance computation"
     prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
