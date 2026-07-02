@@ -205,6 +205,17 @@ function compute_distances(
     )
 end
 
+# This implementation casts integers to Float32. Floats are handled above.
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
+    alg::GaussianVStatMMD;
+    kwargs...,
+)::TransitionDistanceResult where {T<:Real}
+    @info "Casting data from $T to Float32 for distance computation"
+    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
+    return compute_distances(prob, alg; kwargs...)
+end
+
 # VStat + Contiguous: blockwise computation 
 function compute_kernel_matrix(
     data::ContiguousData{T}, alg::GaussianVStatMMD; progress::Bool=false
@@ -285,17 +296,6 @@ function compute_kernel_matrix(
     BLAS.set_num_threads(blas_threads_before)
     K ./= n_samples^2
     return K
-end
-
-# This implementation casts integers to Float32. Floats are handled above.
-function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
-    alg::GaussianVStatMMD;
-    kwargs...,
-)::TransitionDistanceResult where {T<:Real}
-    @info "Casting data from $T to Float32 for distance computation"
-    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
-    return compute_distances(prob, alg; kwargs...)
 end
 
 # Estimate E[k(X, Y)] from samples x and y.
