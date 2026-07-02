@@ -154,6 +154,7 @@ The `bandwidth` is either a number > 0 or `nothing`, in which case a reasonable 
 For data in [`Contiguous`](@ref) layout, an efficient implementation using blockwise matrix multiplications is employed.
 The `blocksize` controls how many anchors are processed in one block, e.g.,
 for the default `blocksize=4` the method computes ``4*4=16`` anchor pairs at once.
+Note that the given `blocksize` is decremented until it divides `n_anchors`.
 For data in [`Jagged`](@ref) layout, the `blocksize` has no effect.
 """
 struct GaussianVStatMMD <: AbstractTransitionDistanceAlgorithm
@@ -213,6 +214,7 @@ function compute_kernel_matrix(
     inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
     K = zeros(T, n_anchors, n_anchors)
 
+    # decrease blocksize until it divides n_anchors
     blocksize = min(alg.blocksize, n_anchors)
     while n_anchors % blocksize != 0
         blocksize -= 1
