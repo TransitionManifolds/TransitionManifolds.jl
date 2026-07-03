@@ -80,8 +80,6 @@ function compute_distances(
     return compute_distances(convert_contiguous_to_jagged(prob), alg; kwargs...)
 end
 
-# Estimate E[k(X, Y)] from samples x and y.
-# x has shape (d, n) and y has shape (d, m).
 function kernel_eval(
     x::AbstractMatrix{T}, y::AbstractMatrix{T}, alg::GaussianDStatMMD
 )::T where {T<:AbstractFloat}
@@ -102,8 +100,6 @@ function kernel_eval(
     return out / n
 end
 
-# Estimate E[k(X, X')] from samples x.
-# x has shape (d, n).
 function kernel_eval(
     x::AbstractMatrix{T}, alg::GaussianDStatMMD
 )::T where {T<:AbstractFloat}
@@ -185,7 +181,7 @@ function compute_distances(
     prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
     alg::GaussianVStatMMD;
     progress::Bool=false,
-)::TransitionDistanceResult where {T<:AbstractFloat}
+)::TransitionDistanceResult{T} where {T<:AbstractFloat}
     data = prob.data
 
     # automatic bandwidth selection
@@ -197,7 +193,7 @@ function compute_distances(
 
     # For jagged layout, `compute_kernel_matrix` uses the standard method from `utils.jl`.
     # For contigous layout, there is a special implementation below.
-    t1 = @elapsed D = compute_kernel_matrix(data, alg; progress=progress)
+    t1 = @elapsed D = compute_kernel_matrix_buffered(data, alg; progress=progress)
 
     t2 = @elapsed convert_kernel_to_distance_matrix!(D)
     return TransitionDistanceResult(
@@ -217,7 +213,7 @@ function compute_distances(
 end
 
 # VStat + Contiguous: blockwise computation 
-function compute_kernel_matrix(
+function compute_kernel_matrix_buffered(
     data::ContiguousData{T}, alg::GaussianVStatMMD; progress::Bool=false
 )::Matrix{T} where {T<:AbstractFloat}
     dim, n_samples, n_anchors = size(data)
@@ -298,19 +294,14 @@ function compute_kernel_matrix(
     return K
 end
 
-# Estimate E[k(X, Y)] from samples x and y.
-# x has shape (d, n) and y has shape (d, m).
 function kernel_eval(
-    x::AbstractMatrix{T}, y::AbstractMatrix{T}, alg::GaussianVStatMMD
+    x::AbstractMatrix{T},
+    y::AbstractMatrix{T},
+    alg::GaussianVStatMMD,
+    buffer::AbstractMatrix{T},
 )::T where {T<:AbstractFloat}
     inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
-    dist_sq = pairwise(SqEuclidean(), x, y; dims=2)
+    dist_sq = pairwise!(SqEuclidean(), buffer, x, y; dims=2)
     dist_sq .= exp.(inv_sigma_sq .* dist_sq)
     return mean(dist_sq)
-end
-
-function kernel_eval(
-    x::AbstractMatrix{T}, alg::GaussianVStatMMD
-)::T where {T<:AbstractFloat}
-    kernel_eval(x, x, alg)
 end
