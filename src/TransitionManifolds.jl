@@ -21,6 +21,8 @@ export PreprocessResult, preprocess
 include("utils.jl")
 export normalize_cloud
 
+include("kernel_interface.jl")
+
 include("td_gaussian_mmd.jl")
 export GaussianVStatMMD, GaussianDStatMMD
 
