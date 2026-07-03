@@ -28,18 +28,23 @@ function compute_kernel_matrix(
         desc="Computing Kernel Matrix:",
     )
 
+    # set BLAS threads for manual threading
+    blas_threads_before = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
+
     Threads.@threads for i in eachindex(data)
         K[i, i] = kernel_eval(data[i], alg)
     end
     next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
 
-    Threads.@threads for i in eachindex(data)
+    Threads.@threads :greedy for i in eachindex(data)
         for j in 1:(i - 1)
             K[j, i] = kernel_eval(data[j], data[i], alg)
         end
         next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
     end
 
+    BLAS.set_num_threads(blas_threads_before)
     return K
 end
 
