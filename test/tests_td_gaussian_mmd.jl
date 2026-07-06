@@ -119,6 +119,31 @@
 end
 
 @testset "GaussianVStatMMD" begin
+    @testset "kernel_eval" begin
+        alg = GaussianVStatMMD(; bandwidth=sqrt(2))
+        x = transpose([1.0 1; 2 3; 0 -1])
+        y = transpose([1.0 1; 2 0])
+
+        @testset "not weighted" begin
+            expected = sum([1, exp(-1), exp(-2.5), exp(-4.5), exp(-2.5), exp(-2.5)]) / 6
+            @test TransitionManifolds.kernel_eval(x, y, alg) ≈ expected
+        end
+
+        @testset "weighted" begin
+            wx = [0.5, 0.3, 0.2]
+            wy = [0.1, 0.9]
+            expected = sum([
+                0.5 * 0.1 * 1,
+                0.5 * 0.9 * exp(-1),
+                0.3 * 0.1 * exp(-2.5),
+                0.3 * 0.9 * exp(-4.5),
+                0.2 * 0.1 * exp(-2.5),
+                0.2 * 0.9 * exp(-2.5),
+            ])
+            @test TransitionManifolds.kernel_eval(x, y, wx, wy, alg) ≈ expected
+        end
+    end
+
     @testset "compute_distances" begin
         @testset "output" begin
             alg = GaussianVStatMMD(; bandwidth=0.123)
@@ -193,7 +218,7 @@ end
         end
 
         @testset "convergence to 0" begin
-            alg = GaussianVStatMMD(bandwidth=0.3)
+            alg = GaussianVStatMMD(; bandwidth=0.3)
             seed!(1234)
             x = rand(2, 2000, 2)
 
@@ -217,6 +242,100 @@ end
                 x = [rand(2, 100), rand(2, 200), rand(2, 50)]
                 res = compute_distances(x, alg)
                 @test res.info["bandwidth"] > 0
+            end
+        end
+    end
+
+    @testset "compute_distances (weighted)" begin
+        @testset "output" begin
+            alg = GaussianVStatMMD(; bandwidth=0.123, blocksize=1)
+            x = rand(2, 4, 3)
+            w = rand(4, 3)
+            x_j = [rand(2, 4), rand(2, 3), rand(2, 2)]
+            w_j = [rand(4), rand(3), rand(2)]
+            prob = TransitionDistanceProblem(x, w)
+            prob_j = TransitionDistanceProblem(x_j, w_j)
+
+            @testset "$(layout(p))" for p in [prob, prob_j]
+                res = compute_distances(p, alg)
+
+                @test size(res.distances) == (3, 3)
+                @test issymmetric(res.distances)
+                @test all(diag(res.distances) .== 0)
+
+                @test res.info["bandwidth"] == 0.123
+                @test res.info["elapsed"] > 0
+            end
+        end
+
+        @testset "types" begin
+            alg = GaussianVStatMMD(; bandwidth=1, blocksize=1)
+            types = [Float64, Float32, Float16]
+
+            @testset "$t" for t in types
+                @testset "Contiguous" begin
+                    x = rand(t, 2, 4, 3)
+                    w = rand(t, 4, 3)
+                    @test typeof(compute_distances(x, alg; weights=w).distances) ==
+                        Array{t,2}
+                end
+
+                @testset "Jagged" begin
+                    x = [rand(t, 2, 4), rand(t, 2, 3), rand(t, 2, 2)]
+                    w = [rand(t, 4), rand(t, 3), rand(t, 2)]
+                    @test typeof(compute_distances(x, alg; weights=w).distances) ==
+                        Array{t,2}
+                end
+            end
+        end
+
+        @testset "cast" begin
+            alg = GaussianVStatMMD(; bandwidth=1, blocksize=1)
+            types = [Int64, Int32, UInt32]
+
+            @testset "$t" for t in types
+                @testset "Contiguous" begin
+                    x = rand(t, 2, 4, 3)
+                    w = rand(t, 4, 3)
+                    res = @test_logs (:info, r"Casting data") compute_distances(
+                        x, alg; weights=w
+                    )
+                    @test typeof(res.distances) == Array{Float32,2}
+                end
+
+                @testset "Jagged" begin
+                    x = [rand(t, 2, 4), rand(t, 2, 3), rand(t, 2, 2)]
+                    w = [rand(t, 4), rand(t, 3), rand(t, 2)]
+                    res = @test_logs (:info, r"Casting data") compute_distances(
+                        x, alg; weights=w
+                    )
+                    @test typeof(res.distances) == Array{Float32,2}
+                end
+            end
+        end
+
+        @testset "compare to unweighted" begin
+            alg = GaussianVStatMMD(; bandwidth=0.123)
+
+            @testset "Contiguous" begin
+                x = rand(2, 8, 4)
+                w = zeros(8, 4)
+                w[5:8, :] .= 1
+                x_eff = x[:, 5:8, :]
+
+                @test compute_distances(x, alg; weights=w).distances ≈
+                    compute_distances(x_eff, alg).distances
+            end
+
+            @testset "Jagged" begin
+                x = [rand(2, 8), rand(2, 8), rand(2, 8)]
+                w = [zeros(8), zeros(8), ones(8)]
+                w[1][5:8] .= 1
+                w[2][1:2] .= 1
+                x_eff = [x[1][:, 5:8], x[2][:, 1:2], x[3]]
+
+                @test compute_distances(x, alg; weights=w).distances ≈
+                    compute_distances(x_eff, alg).distances
             end
         end
     end

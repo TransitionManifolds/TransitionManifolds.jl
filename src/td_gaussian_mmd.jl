@@ -171,29 +171,34 @@ GaussianVStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20
 """
     compute_distances(prob, alg::GaussianVStatMMD; kwargs...) -> TransitionDistanceResult
 
-The [`GaussianVStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Weighted samples are not supported.
+The [`GaussianVStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Supports weighted samples.
 The `res.info` dictionary contains
 
   - `res.info["elapsed"]`: the elapsed time
   - `res.info["bandwidth"]`: the used bandwidth
 """
 function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
+    prob::TransitionDistanceProblem{T,W,<:AbstractDataLayout},
     alg::GaussianVStatMMD;
     progress::Bool=false,
-)::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    data = prob.data
-
+)::TransitionDistanceResult{T} where {T<:AbstractFloat,W<:Union{Real,Nothing}}
     # automatic bandwidth selection
     if isnothing(alg.bandwidth)
-        subsamples = subsamples_from_data(data, 100)
+        subsamples = subsamples_from_data(prob.data, 100)
         bandwidth = tune_bandwidth_gaussian(subsamples)
         alg = GaussianVStatMMD(bandwidth, alg.blocksize)
     end
 
-    # For jagged layout, `compute_kernel_matrix` uses the standard method from `utils.jl`.
-    # For contigous layout, there is a special implementation below.
-    t1 = @elapsed D = compute_kernel_matrix_buffered(data, alg; progress=progress)
+    t1 = @elapsed D = if W === Nothing
+        # For jagged layout, `compute_kernel_matrix_buffered` uses the standard method from `kernel_interface.jl`.
+        # For contiguous layout, there is a special implementation below.
+        compute_kernel_matrix_buffered(prob.data, alg; progress=progress)
+    else
+        # In the weighted case, the standard method from `kernel_interface.jl` is always used.
+        # Thus, contiguous layout has to be converted to jagged.
+        prob = (layout(prob) === Contiguous) ? convert_contiguous_to_jagged(prob) : prob
+        compute_kernel_matrix_buffered(prob.data, prob.weights, alg; progress=progress)
+    end
 
     t2 = @elapsed convert_kernel_to_distance_matrix!(D)
     return TransitionDistanceResult(
@@ -203,14 +208,16 @@ end
 
 # This implementation casts integers to Float32. Floats are handled above.
 function compute_distances(
-    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
+    prob::TransitionDistanceProblem{T,W,<:AbstractDataLayout},
     alg::GaussianVStatMMD;
     kwargs...,
-)::TransitionDistanceResult where {T<:Real}
+)::TransitionDistanceResult where {T<:Real,W<:Union{Real,Nothing}}
     @info "Casting data from $T to Float32 for distance computation"
-    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
+    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data), prob.weights)
     return compute_distances(prob, alg; kwargs...)
 end
+
+# TODO: implement a weighted version of the below blockwise version?
 
 # VStat + Contiguous: blockwise computation 
 function compute_kernel_matrix_buffered(
@@ -304,4 +311,20 @@ function kernel_eval(
     dist_sq = pairwise!(SqEuclidean(), buffer, x, y; dims=2)
     dist_sq .= exp.(inv_sigma_sq .* dist_sq)
     return mean(dist_sq)
+end
+
+function kernel_eval(
+    x::AbstractMatrix{T},
+    y::AbstractMatrix{T},
+    wx::AbstractVector{W},
+    wy::AbstractVector{W},
+    alg::GaussianVStatMMD,
+    buffer::AbstractMatrix{T},
+)::T where {T<:AbstractFloat,W<:Real}
+    inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
+    dist_sq = pairwise!(SqEuclidean(), buffer, x, y; dims=2)
+    @tullio dist_sq[i, j] = wx[i] * wy[j] * exp(inv_sigma_sq * dist_sq[i, j]) (
+        threads = false
+    )
+    return sum(dist_sq) / sum(wx) / sum(wy)
 end
