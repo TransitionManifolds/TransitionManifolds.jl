@@ -6,6 +6,7 @@ using LinearAlgebra
 
 # Base package
 include("tests_interface.jl")
+include("tests_kernel_interface.jl")
 include("tests_utils.jl")
 include("tests_td_gaussian_mmd.jl")
 include("tests_em_diffusion_maps.jl")
