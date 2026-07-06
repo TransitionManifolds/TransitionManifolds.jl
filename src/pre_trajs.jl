@@ -102,7 +102,7 @@ function sample_points(trajs::Trajectories{T}, k::Int)::Matrix{T} where {T<:Real
 end
 
 # Compute the average jump distance from a trajectory point to its successor.
-function mean_jump_dist(trajs::Trajectories, dist::Metric)::Float64
+function mean_jump_dist(trajs::Trajectories, dist::SemiMetric)::Float64
     mjd = 0.0
     for traj in trajs.trajs
         for i in 1:(size(traj, 2) - 1)
@@ -124,7 +124,7 @@ struct FarthestPointSamplingResult
 end
 
 """
-    farthest_point_sampling(trajs::Trajectories, k::Int; dist::Metric=Euclidean(), init_idx=1, centering=false) -> FarthestPointSamplingResult
+    farthest_point_sampling(trajs::Trajectories, k::Int; dist::SemiMetric=Euclidean(), init_idx=1, centering=false) -> FarthestPointSamplingResult
 
 Select `k` points from `trajs` using farthest point sampling.
 
@@ -144,7 +144,7 @@ Returns a [`FarthestPointSamplingResult`](@ref) object `res` that contains
 function farthest_point_sampling(
     trajs::Trajectories,
     k::Int;
-    dist::Metric=Euclidean(),
+    dist::SemiMetric=Euclidean(),
     init_idx::Int=1,
     centering::Bool=false,
 )::FarthestPointSamplingResult
@@ -156,7 +156,7 @@ function farthest_point_sampling(
 end
 
 function _farthest_point_sampling(
-    trajs::Trajectories, k::Int, dist::Metric, init_idx::Int
+    trajs::Trajectories, k::Int, dist::SemiMetric, init_idx::Int
 )::FarthestPointSamplingResult
     n = length(trajs)
     1 <= init_idx <= n ||
@@ -198,7 +198,7 @@ end
 # replace each selected point by the point in its cluster that minimizes
 # the cumulative distance to all other cluster points
 function _center_farthest_points(
-    res::FarthestPointSamplingResult, trajs::Trajectories, dist::Metric
+    res::FarthestPointSamplingResult, trajs::Trajectories, dist::SemiMetric
 )::FarthestPointSamplingResult
     k = length(res.selected)
     n = length(res.assignments)
@@ -260,13 +260,11 @@ The `res.info` dictionary contains
 function preprocess(
     data::Trajectories{T};
     anchors::Union{AbstractArray{T,2},Int,Nothing}=nothing,
-    dist::Metric=Euclidean(),
+    dist::SemiMetric=Euclidean(),
     max_dist::Union{Real,Vector{<:Real},Nothing}=nothing,
     min_samples::Int=1,
     max_samples::Int=typemax(Int),
 )::PreprocessResult where {T<:Real}
-    # TODO: allow PreMetric or SemiMetric?
-
     # process `anchors`
     if isnothing(anchors)
         # if no anchors were provided, set it to 1% of trajs points, but at most 1000
@@ -354,7 +352,7 @@ function set_max_dist(
     n_anchors::Int,
     trajs::Trajectories,
     distances::AbstractMatrix{<:Real},
-    dist::Metric,
+    dist::SemiMetric,
 )::Vector{<:Real}
     if isnothing(max_dist)
         k = 10
@@ -390,7 +388,7 @@ end
 # For `anchors` of shape (d, n_anchors) and `trajs` containing n_points points,
 # compute the (n_points, n_anchors) pairwise distance matrix.
 function anchor_trajs_distances(
-    anchors::AbstractMatrix{T}, trajs::Trajectories{T}, dist::Metric
+    anchors::AbstractMatrix{T}, trajs::Trajectories{T}, dist::SemiMetric
 )::Matrix{Float64} where {T<:Real}
     n_anchors = size(anchors, 2)
     distances = Matrix{Float64}(undef, length(trajs), n_anchors)
