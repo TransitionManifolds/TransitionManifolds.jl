@@ -70,6 +70,7 @@ Optionally, `weights` can be specified that give each sample in `data` a weight.
 Thus, the layout and shape of `weights` has to match the `data`:
 In the `L=Contiguous` layout, the `weights` are an `Array{W,2}` of shape `(n_samples, n_anchors)`,
 and in the `L=Jagged` layout, the `weights` are a `Vector{Vector{W}}` of length `n_anchors`.
+The `weights` must be non-negative, and for each anchor there must be at least one positive weight.
 
 The type of data points is `T<:Real`, and the type of the weights is `W<:Real`
 if weights were provided and `W=Nothing` otherwise.

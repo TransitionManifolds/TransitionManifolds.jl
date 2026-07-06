@@ -1,5 +1,5 @@
 """
-    kernel_eval(x::AbstractMatrix, y::AbstractMatrix, alg::AbstractTransitionDistanceAlgorithm, [buffer]) -> Real
+    kernel_eval(x::Matrix, y::Matrix, alg::AbstractTransitionDistanceAlgorithm, [buffer]) -> Real
 
 Estimate ``E[k(X, Y)]`` from samples `x` of the random variable ``X`` and samples `y` of the random variable ``Y``.
 
@@ -18,7 +18,7 @@ Implementing `kernel_eval(x, y, alg, buffer)` automatically yields an implementa
 ## Optional methods
 
 Implement `kernel_eval(x, alg)` or `kernel_eval(x, alg, buffer)` to handle the special case `x=y`.
-Default behavior: calls `kernel_eval(x, x, alg)` or `kernel_eval(x, x alg, buffer)`.
+Default behavior: calls `kernel_eval(x, x, alg)` or `kernel_eval(x, x, alg, buffer)`.
 
 ## Provided methods
 
@@ -120,6 +120,153 @@ function compute_kernel_matrix_buffered(
         for j in 1:(i - 1)
             bufview = @view buffer[:, 1:size(data[j], 2)]
             K[j, i] = kernel_eval(data[i], data[j], alg, bufview)
+        end
+        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+    end
+
+    BLAS.set_num_threads(blas_threads_before)
+    return K
+end
+
+"""
+    kernel_eval(x::Matrix, y::Matrix, wx::Vector, wy::Vector, alg::AbstractTransitionDistanceAlgorithm, [buffer]) -> Real
+
+Estimate ``E[k(X, Y)]`` from weighted samples `x` of the random variable ``X`` and weighted samples `y` of the random variable ``Y``.
+
+The kernel `k` is implicitly given by the `alg`.
+`x` contains `n` samples and has shape `(d, n)`.
+`y` contains `m` samples and has shape `(d, m)`.
+The weights `wx` and `wy` have shapes `(n,)` and `(m,)`, i.e., the sample `x[:, i]` has the weight `wx[i]`.
+
+# Interface
+
+## Required methods
+
+The `alg` has to implement either `kernel_eval(x, y, wx, wy, alg)` or `kernel_eval(x, y, wx, wy, alg, buffer)`.
+The `buffer` has shape `(n, m)` and can be useful for some algorithms to store pairwise computations between the samples.
+Implementing `kernel_eval(x, y, wx, wy, alg, buffer)` automatically yields an implementation of `kernel_eval(x, y, wx, wy, alg)`.
+
+## Optional methods
+
+Implement `kernel_eval(x, wx, alg)` or `kernel_eval(x, wx, alg, buffer)` to handle the special case `x=y`.
+Default behavior: calls `kernel_eval(x, x, wx, wx, alg)` or `kernel_eval(x, x, wx, wx, alg, buffer)`.
+
+## Provided methods
+
+Implementing `kernel_eval(x, y, wx, wy, alg)` for `alg` allows calling [`compute_kernel_matrix`](@ref);
+Implementing `kernel_eval(x, y, wx, wy, alg, buffer)` for `alg` allows calling [`compute_kernel_matrix_buffered`](@ref).
+"""
+function kernel_eval(
+    x::AbstractMatrix,
+    y::AbstractMatrix,
+    wx::AbstractVector,
+    wy::AbstractVector,
+    alg::AbstractTransitionDistanceAlgorithm,
+    buffer::AbstractMatrix,
+)::Real
+    error("No implementation of `kernel_eval` for algorithm `$(typeof(alg))`")
+end
+
+function kernel_eval(
+    x::AbstractMatrix{T},
+    y::AbstractMatrix{T},
+    wx::AbstractVector,
+    wy::AbstractVector,
+    alg::AbstractTransitionDistanceAlgorithm,
+) where {T}
+    buffer = Matrix{T}(undef, size(x, 2), size(y, 2))
+    return kernel_eval(x, y, wx, wy, alg, buffer)
+end
+
+kernel_eval(
+    x::AbstractMatrix,
+    wx::AbstractVector,
+    alg::AbstractTransitionDistanceAlgorithm,
+    buffer::AbstractMatrix,
+) = kernel_eval(x, x, wx, wx, alg, buffer)
+kernel_eval(
+    x::AbstractMatrix, wx::AbstractVector, alg::AbstractTransitionDistanceAlgorithm
+) = kernel_eval(x, x, wx, wx, alg)
+
+"""
+    compute_kernel_matrix(data::JaggedData{T}, weights::JaggedWeights, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> Matrix{T}
+
+Compute the kernel matrix ``K`` with ``K_{ij} := E[k(x[i], x[j])]`` from weighted samples.
+
+Since K is symmetric, the entries below the diagonal are not filled in and left to be 0.
+
+Requires that the method `kernel_eval(x, y, wx, wy, alg)` is implemented.
+"""
+function compute_kernel_matrix(
+    data::JaggedData{T},
+    weights::JaggedWeights,
+    alg::AbstractTransitionDistanceAlgorithm;
+    progress::Bool=false,
+)::Matrix{T} where {T}
+    n = length(data)
+    K = zeros(T, n, n)
+    pbar = Progress(
+        binomial(n, 2) + n;
+        enabled=progress,
+        showspeed=true,
+        desc="Computing Kernel Matrix:",
+    )
+
+    # set BLAS threads for manual threading
+    blas_threads_before = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
+
+    Threads.@threads for i in eachindex(data)
+        K[i, i] = kernel_eval(data[i], weights[i], alg)
+    end
+    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+
+    Threads.@threads :greedy for i in 2:length(data)
+        for j in 1:(i - 1)
+            K[j, i] = kernel_eval(data[j], data[i], weights[j], weights[i], alg)
+        end
+        next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+    end
+
+    BLAS.set_num_threads(blas_threads_before)
+    return K
+end
+
+"""
+A version of [`compute_kernel_matrix`](@ref) for weighted samples that makes use of a buffer.
+
+Requires that the method `kernel_eval(x, y, wx, wy, alg, buffer)` is implemented.
+"""
+function compute_kernel_matrix_buffered(
+    data::JaggedData{T},
+    weights::JaggedWeights,
+    alg::AbstractTransitionDistanceAlgorithm;
+    progress::Bool=false,
+)::Matrix{T} where {T}
+    n = length(data)
+    K = zeros(T, n, n)
+    pbar = Progress(
+        binomial(n, 2) + n;
+        enabled=progress,
+        showspeed=true,
+        desc="Computing Kernel Matrix:",
+    )
+
+    # set BLAS threads for manual threading
+    blas_threads_before = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
+
+    Threads.@threads for i in eachindex(data)
+        K[i, i] = kernel_eval(data[i], weights[i], alg)
+    end
+    next!(pbar; step=n, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
+
+    Threads.@threads :greedy for i in 2:length(data)
+        nj_max = maximum([size(data[j], 2) for j in 1:(i - 1)])
+        buffer = Matrix{T}(undef, size(data[i], 2), nj_max)
+        for j in 1:(i - 1)
+            bufview = @view buffer[:, 1:size(data[j], 2)]
+            K[j, i] = kernel_eval(data[i], data[j], weights[i], weights[j], alg, bufview)
         end
         next!(pbar; step=(i - 1), showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
     end
