@@ -1,8 +1,5 @@
 # TransitionManifolds.jl
 
-```@contents
-```
-
 
 ## Compute Distances
 
