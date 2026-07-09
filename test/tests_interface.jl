@@ -86,6 +86,37 @@
         @test_throws ArgumentError TransitionDistanceProblem(xc, wj)
     end
 
+    @testset "equality and hash" begin
+        p1 = TransitionDistanceProblem(ones(2, 3, 4))
+        p2 = TransitionDistanceProblem(ones(2, 3, 4))
+        p3 = TransitionDistanceProblem(zeros(2, 3, 4))
+        p4 = TransitionDistanceProblem(ones(2, 3, 4), ones(3, 4))
+        p5 = TransitionDistanceProblem(ones(2, 3, 4), ones(3, 4))
+        p6 = TransitionDistanceProblem(ones(2, 3, 4), 2 .* ones(3, 4))
+        p7 = TransitionDistanceProblem([ones(2, 3) for _ in 1:4])
+        p8 = TransitionDistanceProblem([ones(2, 3) for _ in 1:4])
+        p9 = TransitionDistanceProblem([ones(2, 3) for _ in 1:4], [ones(3) for _ in 1:4])
+        p10 = TransitionDistanceProblem([ones(2, 3) for _ in 1:4], [ones(3) for _ in 1:4])
+        p11 = TransitionDistanceProblem(
+            [ones(2, 3) for _ in 1:4], [2 * ones(3) for _ in 1:4]
+        )
+        ps = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11]
+        equal_pairs = [(1, 2), (4, 5), (7, 8), (9, 10)]
+
+        @testset "$i vs $j" for i in 1:11, j in i:11
+            if i == j || (i, j) ∈ equal_pairs
+                @test ps[i] == ps[j]
+                @test hash(ps[i]) == hash(ps[j])
+
+            else
+                @test ps[i] != ps[j]
+                # inequality of hashes is not guaranteed
+                # but works almost always
+                @test hash(ps[i]) != hash(ps[j])
+            end
+        end
+    end
+
     @testset "cat anchors" begin
         @testset "no weights" begin
             p1 = TransitionDistanceProblem(rand(4, 3, 2))

@@ -124,6 +124,12 @@ end
 
 TransitionDistanceProblem(data; weights=nothing) = TransitionDistanceProblem(data, weights)
 
+Base.:(==)(p1::TransitionDistanceProblem, p2::TransitionDistanceProblem) =
+    (p1.data == p2.data) && (p1.weights == p2.weights)
+
+# hashing can be useful for generating file names
+Base.hash(prob::TransitionDistanceProblem, h::UInt) = hash(prob.data, hash(prob.weights, h))
+
 """
     layout(prob::TransitionDistanceProblem)
 
