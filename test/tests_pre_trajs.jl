@@ -303,6 +303,8 @@
             end
         end
 
+        # TODO: test correct samples for lag > 1
+
         @testset "default kwargs" begin
             traj = rand(2, 500)
             data = Trajectories(traj)

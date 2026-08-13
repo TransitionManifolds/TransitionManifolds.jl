@@ -234,7 +234,7 @@ function _center_farthest_points(
 end
 
 """
-    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist, min_samples::Int, max_samples::Int) -> PreprocessResult
+    preprocess(data::Trajectories; anchors, dist=Euclidean(), max_dist, min_samples::Int, max_samples::Int, lag=1) -> PreprocessResult
 
 Obtain approximate burst simulation data from [`Trajectories`](@ref).
 
@@ -252,6 +252,9 @@ half of the average jumping distance of the 10 closest trajectory points to the 
 
 All `anchors` that by the end have less than `min_samples` samples are removed (default: `min_samples=1`).
 
+The `lag` (default 1) controls which point is considered the successor, i.e., if ``x_i`` is close to an anchor
+then the successor ``x_{i+l}``, where ``l`` is the `lag`, is added to the samples.
+
 The `res.info` dictionary contains
 
   - `res.info["anchors"]`: the final set of anchors
@@ -264,6 +267,7 @@ function preprocess(
     max_dist::Union{Real,Vector{<:Real},Nothing}=nothing,
     min_samples::Int=1,
     max_samples::Int=typemax(Int),
+    lag::Int=1,
 )::PreprocessResult where {T<:Real}
     # process `anchors`
     if isnothing(anchors)
@@ -293,10 +297,12 @@ function preprocess(
     # Currently, it is the wrong way around during construction in anchor_trajs_distances,
     # but the correct way around for accessing dcol later.
     distances = anchor_trajs_distances(anchors, data, dist)
-    # the end point of a trajectory is not valid
-    for offset in @view(data.offsets[2:end])
-        # offset - 1 is the last index of a trajectory
-        distances[offset - 1, :] .= typemax(Float64)
+    # the end points of a trajectory are not valid (depending on lag)
+    for i in 2:length(data.offsets)
+        traj_last_idx = data.offsets[i] - 1
+        traj_first_idx = data.offsets[i - 1]
+        first_invalid_idx = max(data.offsets[i] - lag, traj_first_idx)
+        distances[first_invalid_idx:traj_last_idx, :] .= typemax(Float64)
     end
 
     max_dist = set_max_dist(max_dist, n_anchors, data, distances, dist)
@@ -316,8 +322,8 @@ function preprocess(
 
         sizehint!(out[i], n_valid)
         for j in @view valid_idxs[1:n_valid]
-            # for each valid j, push the successor j+1
-            push!(out[i], data[j + 1])
+            # for each valid j, push the successor j + lag
+            push!(out[i], data[j + lag])
         end
     end
 
