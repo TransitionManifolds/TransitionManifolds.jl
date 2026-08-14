@@ -303,7 +303,54 @@
             end
         end
 
-        # TODO: test correct samples for lag > 1
+        @testset "correct samples lag=2" begin
+            trajs = Trajectories([
+                hcat([0, 2], [0, 1], [0, 0.25], [0, 0]), hcat([0.5, 0], [1.5, 0], [2.0, 0])
+            ])
+            anchors = hcat([0, 1.5], [0, 0])
+
+            res = preprocess(trajs; anchors=anchors, max_dist=1, lag=2)
+            samples = res.prob.data
+            @test length(samples) == 2
+
+            # first anchor:
+            # close start points are [0, 2] and [0, 1]
+            # -> samples are [0, 0.25] and [0, 0]
+            s1 = samples[1]
+            @test size(s1) == (2, 2)
+            @test [0, 0.25] in eachcol(s1)
+            @test [0, 0] in eachcol(s1)
+
+            # second anchor:
+            # close start points are [0, 1], [0, 0.25], [0.5, 0] but [0, 0.25] is invalid
+            # -> samples are [0, 0], [2, 0]
+            s2 = samples[2]
+            @test size(s2) == (2, 2)
+            @test [0, 0] in eachcol(s2)
+            @test [2, 0] in eachcol(s2)
+        end
+
+        @testset "lag larger than traj" begin
+            trajs = Trajectories([
+                hcat([0, 2], [0, 1], [0, 0.25], [0, 0], [0.5, 0]), hcat([1.5, 0], [2.0, 0])
+            ])
+            anchors = hcat([0, 1.5], [1.5, 0])
+
+            # for anchor 2, no samples match and it should be removed
+            # ([1.5, 0] is invalid because of lag)
+            res = @test_warn "" preprocess(trajs; anchors=anchors, max_dist=1, lag=3)
+            samples = res.prob.data
+            @test length(samples) == 1
+            @test res.info["anchors"] == anchors[:, 1:1]
+
+            # first anchor:
+            # close start points are [0, 2] and [0, 1]
+            # -> samples are [0, 0] and [0.5, 0]
+            s1 = samples[1]
+            @test size(s1) == (2, 2)
+            @test [0, 0] in eachcol(s1)
+            @test [0.5, 0] in eachcol(s1)
+        end
 
         @testset "default kwargs" begin
             traj = rand(2, 500)
