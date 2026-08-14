@@ -176,6 +176,9 @@ function _farthest_point_sampling(
         dmin[i] = dist(this_point, point)
     end
 
+    # buffer for new distances
+    dvec = Vector{Float64}(undef, n)
+
     # farthest point sampling
     @views for l in 2:k
         next_idx = argmax(dmin)
@@ -183,16 +186,28 @@ function _farthest_point_sampling(
 
         # update distances
         this_point = trajs[next_idx]
-        for (i, point) in enumerate(trajs)
-            new_dist = dist(this_point, point)
-            if new_dist < dmin[i]
-                dmin[i] = new_dist
+        distances_trajs_point!(dvec, dist, trajs, this_point)
+        for i in eachindex(dmin)
+            if dvec[i] < dmin[i]
+                dmin[i] = dvec[i]
                 assignments[i] = l
             end
         end
     end
 
     return FarthestPointSamplingResult(selected, assignments)
+end
+
+# Compute the distances between each point in the `trajs` and `x` and store them in `dvec`.
+function distances_trajs_point!(
+    dvec::AbstractVector{<:Real},
+    dist::SemiMetric,
+    trajs::Trajectories,
+    x::AbstractVector{<:Real},
+)
+    for (i, y) in enumerate(trajs)
+        dvec[i] = dist(x, y)
+    end
 end
 
 # replace each selected point by the point in its cluster that minimizes
