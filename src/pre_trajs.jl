@@ -14,8 +14,8 @@ Also supports iteration over all trajectory points, e.g., `for point in trajs`.
 Indexing at `i` returns a view of the `i`-th point, `1 <= i <= length(trajs)`.
 (Example: if the first trajectory has 3 points, `trajs[4]` returns the first point of the second trajectory.)
 """
-struct Trajectories{T<:Real}
-    trajs::AbstractVector{<:AbstractArray{T,2}}
+struct Trajectories{T<:Real, A<:AbstractMatrix{T}}
+    trajs::Vector{A}
     n_trajs::Int  # number of trajectories
     d::Int  # dimension
     n_points::Int  # total number of points
@@ -24,7 +24,7 @@ struct Trajectories{T<:Real}
     # e.g., trajectory `i` has indices `offsets[i]:offsets[i+1]-1`
     offsets::Vector{Int}
 
-    function Trajectories(trajs::AbstractVector{<:AbstractArray{T,2}}) where {T<:Real}
+    function Trajectories(trajs::AbstractVector{A}) where {T<:Real, A<:AbstractMatrix{T}}
         n_trajs = length(trajs)
         n_trajs > 0 || throw(ArgumentError("trajs must not be empty"))
         d = size(trajs[1], 1)
@@ -39,7 +39,7 @@ struct Trajectories{T<:Real}
             n_points += this_n_points
             push!(offsets, offsets[end] + this_n_points)
         end
-        new{T}(trajs, n_trajs, d, n_points, offsets)
+        new{T, A}(Vector{A}(trajs), n_trajs, d, n_points, offsets)
     end
 end
 
