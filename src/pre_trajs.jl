@@ -169,12 +169,13 @@ function _farthest_point_sampling(
     # at the start all points are assigned to cluster 1
     assignments = fill(1, n)
 
+    # extract views into all traj points for fast iteration
+    view_trajs = [(i, trajs[i]) for i in 1:length(trajs)]
+
     # distance of each point `i` to the nearest selected point `assignments[i]`
     dmin = Vector{Float64}(undef, n)
     this_point = trajs[init_idx]
-    for (i, point) in enumerate(trajs)
-        dmin[i] = dist(this_point, point)
-    end
+    distances_trajs_point!(dmin, dist, view_trajs, this_point)
 
     # buffer for new distances
     dvec = Vector{Float64}(undef, n)
@@ -186,7 +187,7 @@ function _farthest_point_sampling(
 
         # update distances
         this_point = trajs[next_idx]
-        distances_trajs_point!(dvec, dist, trajs, this_point)
+        distances_trajs_point!(dvec, dist, view_trajs, this_point)
         for i in eachindex(dmin)
             if dvec[i] < dmin[i]
                 dmin[i] = dvec[i]
@@ -198,14 +199,14 @@ function _farthest_point_sampling(
     return FarthestPointSamplingResult(selected, assignments)
 end
 
-# Compute the distances between each point in the `trajs` and `x` and store them in `dvec`.
+# Compute the distances between each point in the trajs and `x` and store them in `dvec`.
 function distances_trajs_point!(
     dvec::AbstractVector{<:Real},
     dist::SemiMetric,
-    trajs::Trajectories,
+    view_trajs,
     x::AbstractVector{<:Real},
 )
-    for (i, y) in enumerate(trajs)
+    Threads.@threads for (i, y) in view_trajs
         dvec[i] = dist(x, y)
     end
 end
