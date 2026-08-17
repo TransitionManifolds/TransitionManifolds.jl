@@ -16,10 +16,10 @@ trajs_big = Trajectories([rand(100, 160_000), rand(100, 240_000)])
 
 SUITE["FarthestPointSampling"] = BenchmarkGroup()
 SUITE["FarthestPointSampling"]["small"] = @benchmarkable farthest_point_sampling(
-    $trajs_small, $n_anchors; dist=$dist
+    $trajs_small, $n_anchors; dist=($dist)
 )
 SUITE["FarthestPointSampling"]["big"] = @benchmarkable farthest_point_sampling(
-    $trajs_big, $n_anchors; dist=$dist
+    $trajs_big, $n_anchors; dist=($dist)
 )
 
 end

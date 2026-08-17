@@ -14,7 +14,7 @@ Also supports iteration over all trajectory points, e.g., `for point in trajs`.
 Indexing at `i` returns a view of the `i`-th point, `1 <= i <= length(trajs)`.
 (Example: if the first trajectory has 3 points, `trajs[4]` returns the first point of the second trajectory.)
 """
-struct Trajectories{T<:Real, A<:AbstractMatrix{T}}
+struct Trajectories{T<:Real,A<:AbstractMatrix{T}}
     trajs::Vector{A}
     n_trajs::Int  # number of trajectories
     d::Int  # dimension
@@ -24,7 +24,7 @@ struct Trajectories{T<:Real, A<:AbstractMatrix{T}}
     # e.g., trajectory `i` has indices `offsets[i]:offsets[i+1]-1`
     offsets::Vector{Int}
 
-    function Trajectories(trajs::AbstractVector{A}) where {T<:Real, A<:AbstractMatrix{T}}
+    function Trajectories(trajs::AbstractVector{A}) where {T<:Real,A<:AbstractMatrix{T}}
         n_trajs = length(trajs)
         n_trajs > 0 || throw(ArgumentError("trajs must not be empty"))
         d = size(trajs[1], 1)
@@ -39,7 +39,7 @@ struct Trajectories{T<:Real, A<:AbstractMatrix{T}}
             n_points += this_n_points
             push!(offsets, offsets[end] + this_n_points)
         end
-        new{T, A}(Vector{A}(trajs), n_trajs, d, n_points, offsets)
+        new{T,A}(Vector{A}(trajs), n_trajs, d, n_points, offsets)
     end
 end
 
@@ -134,7 +134,7 @@ that is farthest from any other selected point with respect to `dist`.
 Optionally, if `centering=true`, execute a postprocessing step which returns the most central point of each cluster
 instead of the farthest points picked initially.
 The cluster `l` is defined by all points for which the closest selected point is the `l`-th selected point.
-The central point of cluster `l` has the minimal sum of distances to all other points in the cluster.
+The central point of cluster `l` has the minimal sum of distances to all other points in the cluster (medoid).
 
 Returns a [`FarthestPointSamplingResult`](@ref) object `res` that contains
 
@@ -201,10 +201,7 @@ end
 
 # Compute the distances between each point in the trajs and `x` and store them in `dvec`.
 function distances_trajs_point!(
-    dvec::AbstractVector{<:Real},
-    dist::SemiMetric,
-    view_trajs,
-    x::AbstractVector{<:Real},
+    dvec::AbstractVector{<:Real}, dist::SemiMetric, view_trajs, x::AbstractVector{<:Real}
 )
     Threads.@threads for (i, y) in view_trajs
         dvec[i] = dist(x, y)

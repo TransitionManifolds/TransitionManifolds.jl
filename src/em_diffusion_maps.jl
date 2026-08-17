@@ -40,8 +40,9 @@ struct DiffusionMaps <: AbstractEmbeddingAlgorithm
         new(bandwidth, alpha)
     end
 end
-DiffusionMaps(; bandwidth::Union{Real,Nothing}=nothing, alpha::Real=0.5) =
-    DiffusionMaps(bandwidth, alpha)
+DiffusionMaps(; bandwidth::Union{Real,Nothing}=nothing, alpha::Real=0.5) = DiffusionMaps(
+    bandwidth, alpha
+)
 
 """
     compute_embedding(distances, alg::DiffusionMaps; kwargs...) -> EmbeddingResult

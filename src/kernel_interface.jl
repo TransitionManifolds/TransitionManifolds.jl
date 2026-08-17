@@ -41,11 +41,12 @@ function kernel_eval(
     return kernel_eval(x, y, alg, buffer)
 end
 
-kernel_eval(
-    x::AbstractMatrix, alg::AbstractTransitionDistanceAlgorithm, buffer::AbstractMatrix
-) = kernel_eval(x, x, alg, buffer)
-kernel_eval(x::AbstractMatrix, alg::AbstractTransitionDistanceAlgorithm) =
-    kernel_eval(x, x, alg)
+kernel_eval(x::AbstractMatrix, alg::AbstractTransitionDistanceAlgorithm, buffer::AbstractMatrix) = kernel_eval(
+    x, x, alg, buffer
+)
+kernel_eval(x::AbstractMatrix, alg::AbstractTransitionDistanceAlgorithm) = kernel_eval(
+    x, x, alg
+)
 
 """
     compute_kernel_matrix(data::JaggedData{T}, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> Matrix{T}
@@ -178,15 +179,12 @@ function kernel_eval(
     return kernel_eval(x, y, wx, wy, alg, buffer)
 end
 
-kernel_eval(
-    x::AbstractMatrix,
-    wx::AbstractVector,
-    alg::AbstractTransitionDistanceAlgorithm,
-    buffer::AbstractMatrix,
-) = kernel_eval(x, x, wx, wx, alg, buffer)
-kernel_eval(
-    x::AbstractMatrix, wx::AbstractVector, alg::AbstractTransitionDistanceAlgorithm
-) = kernel_eval(x, x, wx, wx, alg)
+kernel_eval(x::AbstractMatrix, wx::AbstractVector, alg::AbstractTransitionDistanceAlgorithm, buffer::AbstractMatrix) = kernel_eval(
+    x, x, wx, wx, alg, buffer
+)
+kernel_eval(x::AbstractMatrix, wx::AbstractVector, alg::AbstractTransitionDistanceAlgorithm) = kernel_eval(
+    x, x, wx, wx, alg
+)
 
 """
     compute_kernel_matrix(data::JaggedData{T}, weights::JaggedWeights, alg::AbstractTransitionDistanceAlgorithm; progress=false) -> Matrix{T}
