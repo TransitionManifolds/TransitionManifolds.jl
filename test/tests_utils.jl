@@ -102,3 +102,17 @@ end
         @test data_n ≈ expected || data_n ≈ -expected
     end
 end
+
+@testset "medoid_idx" begin
+    X = reshape([0.0, 1.0, 2.0, 4.0, 20.0], 1, 5)
+
+    @testset "Euclidean" begin
+        # cumulative distances: 27, 24, 23, 25, 73
+        @test TransitionManifolds.medoid_idx(X, Euclidean()) == 3
+    end
+
+    @testset "SqEuclidean" begin
+        # cumulative distances: 421, 372, 333, 285, 1341
+        @test TransitionManifolds.medoid_idx(X, SqEuclidean()) == 4
+    end
+end

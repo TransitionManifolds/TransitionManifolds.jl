@@ -228,19 +228,9 @@ function _center_farthest_points(
     # select most central point in each cluster
     for l in 1:k
         cluster_idxs = clusters[l]
-        cluster_data = trajs[cluster_idxs]
-
-        cum_dists = zeros(length(cluster_data))
-        for i in eachindex(cluster_data)
-            this_point = cluster_data[i]
-            for j in eachindex(cluster_data)
-                if i == j
-                    continue
-                end
-                cum_dists[i] += dist(this_point, cluster_data[j])
-            end
-        end
-        selected[l] = cluster_idxs[argmin(cum_dists)]
+        cluster_data = trajs[cluster_idxs] |> stack
+        center_idx = medoid_idx(cluster_data, dist)
+        selected[l] = cluster_idxs[center_idx]
     end
 
     return FarthestPointSamplingResult(selected, res.assignments)

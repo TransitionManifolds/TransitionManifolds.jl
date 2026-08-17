@@ -92,3 +92,24 @@ function normalize_cloud(X::AbstractMatrix{<:Real}; quant::Real=0.99)
     reverse!(Xr; dims=2)
     return Xr
 end
+
+"""
+    medoid_idx(X::AbstractMatrix{<:Real}, dist::SemiMetric) -> Int
+
+Compute the index of the medoid of the data `X`.
+
+The medoid of the `(d, n_points)` matrix `X` is the column whose sum of distances
+to all other columns is minimal.
+"""
+function medoid_idx(X::AbstractMatrix{<:Real}, dist::SemiMetric)::Int
+    distances = pairwise(dist, X; dims=2)
+    cum_dists = sum(distances; dims=1)[1, :]
+    return argmin(cum_dists)
+end
+
+# for SqEuclidean the medoid is the point closest to the centroid
+function medoid_idx(X::AbstractMatrix{<:Real}, dist::SqEuclidean)::Int
+    centroid = sum(X; dims=2)[:, 1] ./ size(X, 2)
+    distances = colwise(dist, centroid, X)
+    return argmin(distances)
+end
