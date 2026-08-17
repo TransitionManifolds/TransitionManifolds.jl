@@ -1,6 +1,6 @@
 name = "TransitionManifolds"
 uuid = "e1630922-6a54-49b2-ac96-451a43c20e09"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Sören Nagel <nagel@zib.de>", "Marvin Lücke <luecke@zib.de>"]
 
 [deps]
