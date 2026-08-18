@@ -289,37 +289,38 @@ function preprocess(
     n_anchors = size(anchors, 2)
     # at this point `anchors` is a (d, n_anchors) matrix
 
+    lag >= 1 || throw(ArgumentError("lag has to be at least 1"))
+
     # store views of points while collecting the samples to reduce allocations.
     # at the end the views are converted to owned data.
     sample_view = data[1]
     V = typeof(sample_view)
     out = [V[] for _ in 1:n_anchors]
 
-    # compute distances between anchors and trajs
-    # TODO: Switch dims of distances?
-    # Currently, it is the wrong way around during construction in anchor_trajs_distances,
-    # but the correct way around for accessing dcol later.
-    distances = anchor_trajs_distances(anchors, data, dist)
-    # the end points of a trajectory are not valid (depending on lag)
-    for i in 2:length(data.offsets)
-        traj_last_idx = data.offsets[i] - 1
-        traj_first_idx = data.offsets[i - 1]
-        first_invalid_idx = max(data.offsets[i] - lag, traj_first_idx)
-        distances[first_invalid_idx:traj_last_idx, :] .= typemax(Float64)
-    end
-
-    max_dist = set_max_dist(max_dist, n_anchors, data, distances, dist)
-    # at this point `max_dist` is a (n_anchors,) vector
+    # the max distance used for each anchor
+    max_dists = zeros(n_anchors)
 
     # find the matching samples
     for i in 1:n_anchors
-        dcol = @view distances[:, i]
-        # because the end point of each trajectory has dcol=Inf,
-        # an end point is never valid
-        valid_idxs = findall(<=(max_dist[i]), dcol)
+        anchor = @view anchors[:, i]
+        distances = anchor_trajs_distances(anchor, data, dist)
+
+        # the end points of a trajectory are not valid (depending on lag)
+        for j in 2:length(data.offsets)
+            traj_last_idx = data.offsets[j] - 1
+            traj_first_idx = data.offsets[j - 1]
+            first_invalid_idx = max(data.offsets[j] - lag, traj_first_idx)
+            distances[first_invalid_idx:traj_last_idx] .= typemax(Float64)
+        end
+
+        max_dists[i] = set_max_dist(max_dist, i, data, distances, dist)
+
+        # because the end points of each trajectory has distances=Inf,
+        # they are never valid
+        valid_idxs = findall(<=(max_dists[i]), distances)
         n_valid = length(valid_idxs)
         if n_valid > max_samples
-            partialsort!(valid_idxs, 1:max_samples; by=j -> dcol[j])
+            partialsort!(valid_idxs, 1:max_samples; by=j -> distances[j])
             n_valid = max_samples
         end
 
@@ -342,70 +343,66 @@ function preprocess(
         @warn "$n_remove anchors have less than `min_samples` matching samples and were removed. See the `res.info` dict for the remaining anchors"
     filter!(s -> length(s) >= min_samples, out)
     anchors = anchors[:, keep_idxs]
-    max_dist = max_dist[keep_idxs]
+    max_dists = max_dists[keep_idxs]
 
     out = map(stack, out)  # this creates owned copies from the views
 
     return PreprocessResult(
-        TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dist)
+        TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dists)
     )
 end
 
-# Convert the given `max_dist` into a Vector:
-# - if it is alreay a Vector: check length
-# - if it is a Real: return a Vector filled with that number
-# - if it is Nothing: estimate a reasonable max_dist for each anchor via half the average jump distance of
+# Convert the given `max_dist` into a usable maximum distance:
+# - if it is a Vector: return value at i
+# - if it is a Real: return that 
+# - if it is Nothing: estimate a reasonable max_dist via half the average jump distance of
 #   the 10 closest trajectory points
 function set_max_dist(
     max_dist::Union{Real,Vector{<:Real},Nothing},
-    n_anchors::Int,
+    i::Int,
     trajs::Trajectories,
-    distances::AbstractMatrix{<:Real},
+    distances::AbstractVector{<:Real},
     dist::SemiMetric,
-)::Vector{<:Real}
+)::Real
+    # Nothing
     if isnothing(max_dist)
         k = 10
-        max_dist = Vector{Float64}(undef, n_anchors)
-        for i in 1:n_anchors
-            dcol = @view distances[:, i]
-            smallest_dist_idxs = partialsortperm(dcol, 1:min(2 * k, length(dcol)))
+        smallest_dist_idxs = partialsortperm(distances, 1:min(2 * k, length(distances)))
 
-            jump_dist = 0.0
-            n = 0
-            for idx in smallest_dist_idxs
-                if !is_endpoint(trajs, idx)
-                    jump_dist += dist(trajs[idx], trajs[idx + 1])
-                    n += 1
-                end
-                n == k && break
+        jump_dist = 0.0
+        n = 0
+        for idx in smallest_dist_idxs
+            # TODO: respect lag
+            if !is_endpoint(trajs, idx)
+                jump_dist += dist(trajs[idx], trajs[idx + 1])
+                n += 1
             end
-            max_dist[i] = n > 0 ? jump_dist / n / 2 : 0.0
+            n == k && break
         end
+        max_dist = n > 0 ? jump_dist / n / 2 : 0.0
         return max_dist
     end
 
+    # Real
     if max_dist isa Real
-        return fill(max_dist, n_anchors)
+        return max_dist
     end
 
-    length(max_dist) == n_anchors || throw(
-        ArgumentError("`max_dist` must have the same length as the number of anchors")
-    )
-    return max_dist
+    # Vector
+    return max_dist[i]
 end
 
-# For `anchors` of shape (d, n_anchors) and `trajs` containing n_points points,
-# compute the (n_points, n_anchors) pairwise distance matrix.
+# For an `anchor` and `trajs` containing n_points points,
+# compute the n_points distances between the anchor and each point.
 function anchor_trajs_distances(
-    anchors::AbstractMatrix{T}, trajs::Trajectories{T}, dist::SemiMetric
-)::Matrix{Float64} where {T<:Real}
-    n_anchors = size(anchors, 2)
-    distances = Matrix{Float64}(undef, length(trajs), n_anchors)
+    anchor::AbstractVector{T}, trajs::Trajectories{T}, dist::SemiMetric
+)::Vector{Float64} where {T<:Real}
+    distances = Vector{Float64}(undef, length(trajs))
 
     for (i, traj) in enumerate(trajs.trajs)
         start_idx = trajs.offsets[i]
         end_idx = trajs.offsets[i + 1] - 1
-        @views pairwise!(dist, distances[start_idx:end_idx, :], traj, anchors; dims=2)
+        @views colwise!(dist, distances[start_idx:end_idx], traj, anchor)
     end
 
     return distances

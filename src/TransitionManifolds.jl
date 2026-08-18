@@ -3,7 +3,8 @@ module TransitionManifolds
 # ------------- Imports -----------------
 using LinearAlgebra
 using StatsBase: quantile, sample, median, cov, mean
-using Distances: pairwise, pairwise!, colwise, SqEuclidean, SemiMetric, Euclidean
+using Distances: pairwise, pairwise!, colwise, colwise!
+using Distances: SqEuclidean, SemiMetric, Euclidean
 using LoopVectorization: @turbo
 using Tullio: @tullio
 using ProgressMeter: Progress, next!

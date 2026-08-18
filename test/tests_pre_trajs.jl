@@ -147,8 +147,8 @@
             3 1.5
             3.5 2
         ]
-        @test TransitionManifolds.anchor_trajs_distances(anchors, trajs, Euclidean()) ≈
-            expected
+        @test TransitionManifolds.anchor_trajs_distances(anchors[:, 1], trajs, Euclidean()) ≈ expected[:, 1]
+        @test TransitionManifolds.anchor_trajs_distances(anchors[:, 2], trajs, Euclidean()) ≈ expected[:, 2]
     end
 
     @testset "preprocess" begin
