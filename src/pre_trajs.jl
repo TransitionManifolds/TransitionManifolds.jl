@@ -68,15 +68,16 @@ Base.firstindex(::Trajectories) = 1
 Base.lastindex(trajs::Trajectories) = trajs.n_points
 
 """
-    is_endpoint(trajs::Trajectories, i::Int) -> Bool
+    is_endpoint(trajs::Trajectories, i::Int; lag::Int=1) -> Bool
 
-Whether `trajs[i]` is the endpoint of a trajectory.
+Whether `trajs[i]` is an endpoint of a trajectory.
 
-If `is_endpoint(trajs, i)` is true, then `trajs[i+1]` is the startpoint of the next trajectory.
+If `is_endpoint(trajs, i)` is true, then `trajs[i+lag]` does not belong to the same trajectory as `trajs[i]`.
 """
-function is_endpoint(trajs::Trajectories, i::Int)::Bool
+function is_endpoint(trajs::Trajectories, i::Int; lag::Int=1)::Bool
     1 <= i <= trajs.n_points || throw(BoundsError(trajs, i))
-    return insorted(i + 1, trajs.offsets)
+    traj_idx = searchsortedlast(trajs.offsets, i)
+    return (i + lag) >= trajs.offsets[traj_idx + 1]
 end
 
 """
@@ -343,7 +344,7 @@ function _collect_anchor_samples(
             distances[first_invalid_idx:traj_last_idx] .= typemax(Float64)
         end
 
-        max_dists[i] = set_max_dist(max_dist, i, data, distances, dist)
+        max_dists[i] = set_max_dist(max_dist, i, data, distances, dist, lag)
 
         # because the end points of each trajectory has distances=Inf,
         # they are never valid
@@ -394,6 +395,7 @@ function set_max_dist(
     trajs::Trajectories,
     distances::AbstractVector{<:Real},
     dist::SemiMetric,
+    lag::Int,
 )::Real
     # Nothing
     if isnothing(max_dist)
@@ -403,9 +405,8 @@ function set_max_dist(
         jump_dist = 0.0
         n = 0
         for idx in smallest_dist_idxs
-            # TODO: respect lag
-            if !is_endpoint(trajs, idx)
-                jump_dist += dist(trajs[idx], trajs[idx + 1])
+            if !is_endpoint(trajs, idx; lag=lag)
+                jump_dist += dist(trajs[idx], trajs[idx + lag])
                 n += 1
             end
             n == k && break
