@@ -272,24 +272,54 @@ function preprocess(
     max_samples::Int=typemax(Int),
     lag::Int=1,
 )::PreprocessResult where {T<:Real}
-    # process `anchors`
+    anchors = _resolve_anchors(anchors, data, dist)
+    # at this point `anchors` is a (d, n_anchors) matrix
+
+    lag >= 1 || throw(ArgumentError("`lag` has to be at least 1"))
+
+    out, max_dists = _collect_anchor_samples(
+        data, anchors, dist, max_dist, max_samples, lag
+    )
+
+    anchors, max_dists, out = _prune_sparse_anchors(anchors, max_dists, out, min_samples)
+
+    return PreprocessResult(
+        TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dists)
+    )
+end
+
+# resolve the `anchors` into a (d, n_anchors) matrix
+function _resolve_anchors(
+    anchors::Union{AbstractMatrix{T},Int,Nothing}, data::Trajectories{T}, dist::SemiMetric
+)::AbstractMatrix{T} where {T<:Real}
     if isnothing(anchors)
         # if no anchors were provided, set it to 1% of trajs points, but at most 1000
         anchors = round(Int, length(data) * 0.01)
         anchors = clamp(anchors, 2, 1000)
     end
+
     if anchors isa Int
         # use farthest point sampling to generate anchors
         anchors >= 2 || throw(ArgumentError("`anchors` must be at least 2"))
         res = farthest_point_sampling(data, anchors; dist=dist, centering=true)
         anchors = stack(data[res.selected])
     end
+
     size(anchors, 1) == data.d ||
         throw(ArgumentError("dimension `d` of trajs and anchors must match"))
-    n_anchors = size(anchors, 2)
-    # at this point `anchors` is a (d, n_anchors) matrix
 
-    lag >= 1 || throw(ArgumentError("lag has to be at least 1"))
+    return anchors
+end
+
+function _collect_anchor_samples(
+    data::Trajectories,
+    anchors::AbstractMatrix,
+    dist::SemiMetric,
+    max_dist::Union{Real,Vector{<:Real},Nothing},
+    max_samples::Int,
+    lag::Int,
+)
+    n_anchors = size(anchors, 2)
 
     # store views of points while collecting the samples to reduce allocations.
     # at the end the views are converted to owned data.
@@ -331,7 +361,14 @@ function preprocess(
         end
     end
 
-    # remove anchors that have less than `min_samples` samples
+    return out, max_dists
+end
+
+# remove anchors that have less than `min_samples` samples
+function _prune_sparse_anchors(
+    anchors::AbstractMatrix, max_dists::Vector, out::Vector, min_samples::Int
+)
+    n_anchors = size(anchors, 2)
     keep_idxs = findall(s -> length(s) >= min_samples, out)
     n_remove = n_anchors - length(keep_idxs)
     if n_remove == n_anchors
@@ -342,14 +379,8 @@ function preprocess(
     n_remove == 0 ||
         @warn "$n_remove anchors have less than `min_samples` matching samples and were removed. See the `res.info` dict for the remaining anchors"
     filter!(s -> length(s) >= min_samples, out)
-    anchors = anchors[:, keep_idxs]
-    max_dists = max_dists[keep_idxs]
-
     out = map(stack, out)  # this creates owned copies from the views
-
-    return PreprocessResult(
-        TransitionDistanceProblem(out), Dict("anchors" => anchors, "max_dist" => max_dists)
-    )
+    return anchors[:, keep_idxs], max_dists[keep_idxs], out
 end
 
 # Convert the given `max_dist` into a usable maximum distance:
