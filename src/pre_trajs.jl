@@ -332,9 +332,10 @@ function _collect_anchor_samples(
     max_dists = zeros(n_anchors)
 
     # find the matching samples
+    distances = Vector{Float64}(undef, length(data))
     for i in 1:n_anchors
         anchor = @view anchors[:, i]
-        distances = anchor_trajs_distances(anchor, data, dist)
+        anchor_trajs_distances!(distances, anchor, data, dist)
 
         # the end points of a trajectory are not valid (depending on lag)
         for j in 2:length(data.offsets)
@@ -425,17 +426,13 @@ function set_max_dist(
 end
 
 # For an `anchor` and `trajs` containing n_points points,
-# compute the n_points distances between the anchor and each point.
-function anchor_trajs_distances(
-    anchor::AbstractVector{T}, trajs::Trajectories{T}, dist::SemiMetric
-)::Vector{Float64} where {T<:Real}
-    distances = Vector{Float64}(undef, length(trajs))
-
+# compute the n_points distances between the anchor and each point and store into `buffer`.
+function anchor_trajs_distances!(
+    buffer, anchor::AbstractVector{T}, trajs::Trajectories{T}, dist::SemiMetric
+) where {T<:Real}
     for (i, traj) in enumerate(trajs.trajs)
         start_idx = trajs.offsets[i]
         end_idx = trajs.offsets[i + 1] - 1
-        @views colwise!(dist, distances[start_idx:end_idx], traj, anchor)
+        @views colwise!(dist, buffer[start_idx:end_idx], traj, anchor)
     end
-
-    return distances
 end
