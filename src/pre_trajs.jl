@@ -273,10 +273,10 @@ function preprocess(
     max_samples::Int=typemax(Int),
     lag::Int=1,
 )::PreprocessResult where {T<:Real}
+    lag >= 1 || throw(ArgumentError("`lag` has to be at least 1"))
+
     anchors = _resolve_anchors(anchors, data, dist)
     # at this point `anchors` is a (d, n_anchors) matrix
-
-    lag >= 1 || throw(ArgumentError("`lag` has to be at least 1"))
 
     out, max_dists = _collect_anchor_samples(
         data, anchors, dist, max_dist, max_samples, lag
@@ -347,7 +347,7 @@ function _collect_anchor_samples(
 
         max_dists[i] = set_max_dist(max_dist, i, data, distances, dist, lag)
 
-        # because the end points of each trajectory has distances=Inf,
+        # because the end points of each trajectory have distances=Inf,
         # they are never valid
         valid_idxs = findall(<=(max_dists[i]), distances)
         n_valid = length(valid_idxs)
@@ -367,6 +367,7 @@ function _collect_anchor_samples(
 end
 
 # remove anchors that have less than `min_samples` samples
+# and convert the output from views to an owned array
 function _prune_sparse_anchors(
     anchors::AbstractMatrix, max_dists::Vector, out::Vector, min_samples::Int
 )
