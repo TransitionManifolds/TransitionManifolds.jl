@@ -1,5 +1,16 @@
 # Release notes
 
+
+## Version [v0.2.1] - 2026-08-19
+
+### Fixes
+- automatic `max_dist` selection in `preprocess` for `Trajectories` properly respects the `lag`
+
+### Enhancements
+- faster cluster center computation in farthest point sampling
+- reduced allocations in `preprocess` for `Trajectories`
+
+
 ## Version [v0.2.0] - 2026-08-17
 
 ### Features
@@ -19,3 +30,4 @@ Initial release.
 
 [v0.1.0]: https://github.com/TransitionManifolds/TransitionManifolds.jl/releases/tag/v0.1.0
 [v0.2.0]: https://github.com/TransitionManifolds/TransitionManifolds.jl/releases/tag/v0.2.0
+[v0.2.1]: https://github.com/TransitionManifolds/TransitionManifolds.jl/releases/tag/v0.2.1
