@@ -15,3 +15,4 @@ include("tests_pre_trajs.jl")
 # Extensions
 include("tests_td_kernel_mmd.jl")
 include("tests_graphs.jl")
+include("tests_cuda_gaussian_mmd.jl")
