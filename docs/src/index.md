@@ -137,3 +137,17 @@ append_anchors!
 ```@docs
 normalize_cloud
 ```
+
+
+## GPU
+
+The distances computation with the [`GaussianVStatMMD`](@ref) algorithm can be executed on Nvidia GPUs using `CUDA.jl`.
+(Only for [`Contiguous`](@ref) data layout.)
+Simply convert the input data to `CuArray`:
+```julia
+using CUDA
+
+x = rand(2, 5, 20)
+alg = GaussianVStatMMD()
+res = compute_distances(cu(x), alg)
+```
