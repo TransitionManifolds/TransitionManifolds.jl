@@ -9,8 +9,8 @@ using ProgressMeter: Progress, next!
 # VStat + Contiguous, on the GPU: blockwise computation using CUBLAS + broadcasting
 # instead of the CPU implementation in td_gaussian_mmd.jl
 function TransitionManifolds.compute_kernel_matrix_buffered(
-        data::CuArray{T, 3}, alg::GaussianVStatMMD; progress::Bool = false
-    )::Matrix{T} where {T <: AbstractFloat}
+    data::CuArray{T,3}, alg::GaussianVStatMMD; progress::Bool=false
+)::Matrix{T} where {T<:AbstractFloat}
     dim, n_samples, n_anchors = size(data)
     inv_sigma_sq = T(-1.0 / (alg.bandwidth * alg.bandwidth))
 
@@ -30,13 +30,13 @@ function TransitionManifolds.compute_kernel_matrix_buffered(
     # We need ||x||^2 for the distance expansion ||x-y||^2 = ||x||^2 + ||y||^2 - 2<x,y>
     # compute norm once for entire dataset
     data_flat = reshape(data, (dim, n_samples * n_anchors))
-    norms_sq = sum(abs2, data_flat; dims = 1) # (1, total_points)
+    norms_sq = sum(abs2, data_flat; dims=1) # (1, total_points)
 
     pbar = Progress(
         binomial(n_iter, 2) + n_iter;
-        enabled = progress,
-        showspeed = true,
-        desc = "Computing Kernel Matrix:",
+        enabled=progress,
+        showspeed=true,
+        desc="Computing Kernel Matrix:",
     )
 
     for (i_pos, i_range) in enumerate(block_ranges)
@@ -72,11 +72,7 @@ function TransitionManifolds.compute_kernel_matrix_buffered(
             sum!(buffer2, K)
             kernel_matrix[i_range, j_range] .= reshape(buffer2, (bi, bj))
 
-            next!(
-                pbar;
-                step = 1,
-                showvalues = [("Iter", "$(pbar.counter) / $(pbar.n)")],
-            )
+            next!(pbar; step=1, showvalues=[("Iter", "$(pbar.counter) / $(pbar.n)")])
         end
     end
 
@@ -91,12 +87,12 @@ end
 [`subsamples_from_data`](@ref)
 """
 function TransitionManifolds.subsamples_from_data(
-        data::CuArray{T, 3}, n_samples::Int
-    )::Matrix{T} where {T}
+    data::CuArray{T,3}, n_samples::Int
+)::Matrix{T} where {T}
     dim, n_s, n_a = size(data)
     total = n_s * n_a
     n_samples = min(n_samples, total)
-    idx = sample(1:total, n_samples; replace = false)
+    idx = sample(1:total, n_samples; replace=false)
     flat = reshape(data, dim, total)
     return Array(flat[:, idx])
 end

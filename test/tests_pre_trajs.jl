@@ -158,10 +158,14 @@
         ]
         buffer = zeros(7)
 
-        TransitionManifolds.anchor_trajs_distances!(buffer, anchors[:, 1], trajs, Euclidean())
+        TransitionManifolds.anchor_trajs_distances!(
+            buffer, anchors[:, 1], trajs, Euclidean()
+        )
         @test buffer ≈ expected[:, 1]
 
-        TransitionManifolds.anchor_trajs_distances!(buffer, anchors[:, 2], trajs, Euclidean())
+        TransitionManifolds.anchor_trajs_distances!(
+            buffer, anchors[:, 2], trajs, Euclidean()
+        )
         @test buffer ≈ expected[:, 2]
     end
 

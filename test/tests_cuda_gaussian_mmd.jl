@@ -10,7 +10,7 @@ if CUDA.functional()
             x = rand(Float64, 2, 5, 20)
 
             @testset "$T, blocksize $b" for T in (Float32, Float64), b in (1, 3, 20)
-                alg = GaussianVStatMMD(; bandwidth = 0.123, blocksize = b)
+                alg = GaussianVStatMMD(; bandwidth=0.123, blocksize=b)
                 xt = T.(x)
                 expected = TransitionManifolds.compute_kernel_matrix_buffered(xt, alg)
                 if b == 3 #logging for uneven blocksize
@@ -30,7 +30,7 @@ if CUDA.functional()
             prob_gpu = TransitionDistanceProblem(cu(x))
 
             @testset "fixed bandwidth" begin
-                alg = GaussianVStatMMD(; bandwidth = 0.123)
+                alg = GaussianVStatMMD(; bandwidth=0.123)
                 res_cpu = compute_distances(prob_cpu, alg)
                 res_gpu = compute_distances(prob_gpu, alg)
                 @test res_gpu.distances ≈ res_cpu.distances

@@ -47,7 +47,7 @@ SUITE["GaussianDStatMMD"]["Small_Float32"] = @benchmarkable compute_distances(
 
 # --------- KernelDStatMMD ---------
 gaussian_kernel(bandwidth) =
-    ExponentialKernel(; metric = SqEuclidean()) ∘ ScaleTransform(1 / bandwidth)
+    ExponentialKernel(; metric=SqEuclidean()) ∘ ScaleTransform(1 / bandwidth)
 SUITE["KernelDStatMMD"] = BenchmarkGroup()
 
 alg = KernelDStatMMD(gaussian_kernel(sqrt(d_big / 2.0)))
@@ -73,11 +73,11 @@ SUITE["KernelDStatMMD"]["Small_Float32"] = @benchmarkable compute_distances(
 # --------- GaussianVStatMMD ---------
 SUITE["GaussianVStatMMD"] = BenchmarkGroup()
 
-alg = GaussianVStatMMD(; bandwidth = sqrt(d_big / 2.0))
+alg = GaussianVStatMMD(; bandwidth=sqrt(d_big / 2.0))
 SUITE["GaussianVStatMMD"]["Big_Float64"] = @benchmarkable compute_distances($x_big_64, $alg)
 SUITE["GaussianVStatMMD"]["Big_Float32"] = @benchmarkable compute_distances($x_big_32, $alg)
 
-alg = GaussianVStatMMD(; bandwidth = sqrt(d_medium / 2.0))
+alg = GaussianVStatMMD(; bandwidth=sqrt(d_medium / 2.0))
 SUITE["GaussianVStatMMD"]["Medium_Float64"] = @benchmarkable compute_distances(
     $x_medium_64, $alg
 )
@@ -85,7 +85,7 @@ SUITE["GaussianVStatMMD"]["Medium_Float32"] = @benchmarkable compute_distances(
     $x_medium_32, $alg
 )
 
-alg = GaussianVStatMMD(; bandwidth = sqrt(d_small / 2.0))
+alg = GaussianVStatMMD(; bandwidth=sqrt(d_small / 2.0))
 SUITE["GaussianVStatMMD"]["Small_Float64"] = @benchmarkable compute_distances(
     $x_small_64, $alg
 )
@@ -124,17 +124,17 @@ if CUDA.functional()
     x_medium_cu = cu(x_medium_32)
     x_small_cu = cu(x_small_32)
 
-    alg = GaussianVStatMMD(; bandwidth = sqrt(d_big / 2.0))
+    alg = GaussianVStatMMD(; bandwidth=sqrt(d_big / 2.0))
     SUITE["GaussianVStatMMD_GPU"]["Big_Float32"] = @benchmarkable compute_distances(
         $x_big_cu, $alg
     )
 
-    alg = GaussianVStatMMD(; bandwidth = sqrt(d_medium / 2.0))
+    alg = GaussianVStatMMD(; bandwidth=sqrt(d_medium / 2.0))
     SUITE["GaussianVStatMMD_GPU"]["Medium_Float32"] = @benchmarkable compute_distances(
         $x_medium_cu, $alg
     )
 
-    alg = GaussianVStatMMD(; bandwidth = sqrt(d_small / 2.0))
+    alg = GaussianVStatMMD(; bandwidth=sqrt(d_small / 2.0))
     SUITE["GaussianVStatMMD_GPU"]["Small_Float32"] = @benchmarkable compute_distances(
         $x_small_cu, $alg
     )
