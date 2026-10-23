@@ -16,22 +16,18 @@ The output is a `(d, n_samples)` matrix.
 If there are less than `n_samples` data points in `data`, the output will
 contain only all data points, i.e., will have less than `n_samples` columns.
 """
-function subsamples_from_data(
-    data::JaggedData{T}, n_samples::Int
-)::AbstractArray{T,2} where {T}
+function subsamples_from_data(data::JaggedData{T}, n_samples::Int)::Matrix{T} where {T}
     # create a vector of column views containing all data points
     all_cols = mapreduce(eachcol, vcat, data)
 
     n_samples = min(n_samples, length(all_cols))
-    return stack(sample(all_cols, n_samples; replace=false))
+    return stack(sample(all_cols, n_samples; replace=false)) |> Array
 end
 
-function subsamples_from_data(
-    data::ContiguousData{T}, n_samples::Int
-)::AbstractArray{T,2} where {T}
+function subsamples_from_data(data::ContiguousData{T}, n_samples::Int)::Matrix{T} where {T}
     all_slices = eachslice(data; dims=(2, 3))
     n_samples = min(n_samples, length(all_slices))
-    return stack(sample(all_slices, n_samples; replace=false))
+    return stack(sample(all_slices, n_samples; replace=false)) |> Array
 end
 
 """

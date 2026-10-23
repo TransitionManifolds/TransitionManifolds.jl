@@ -81,20 +81,4 @@ function TransitionManifolds.compute_kernel_matrix_buffered(
     return Array(kernel_matrix)
 end
 
-"""
-    subsamples_from_data(data, n_samples) -> Matrix
-
-[`subsamples_from_data`](@ref)
-"""
-function TransitionManifolds.subsamples_from_data(
-    data::CuArray{T,3}, n_samples::Int
-)::Matrix{T} where {T}
-    dim, n_s, n_a = size(data)
-    total = n_s * n_a
-    n_samples = min(n_samples, total)
-    idx = sample(1:total, n_samples; replace=false)
-    flat = reshape(data, dim, total)
-    return Array(flat[:, idx])
-end
-
 end # module
