@@ -3,7 +3,6 @@ module CUDAExt
 using TransitionManifolds
 using CUDA
 using LinearAlgebra: mul!
-using StatsBase: sample
 using ProgressMeter: Progress, next!
 
 # VStat + Contiguous, on the GPU: blockwise computation using CUBLAS + broadcasting
@@ -79,6 +78,30 @@ function TransitionManifolds.compute_kernel_matrix_buffered(
     kernel_matrix ./= n_samples^2
     # we don't have to worry about handling CuArray down the line.
     return Array(kernel_matrix)
+end
+
+"""
+    cu(prob::TransitionDistanceProblem{T,W,Contiguous}) -> TransitionDistanceProblem
+
+Move the `data` (and `weights`, if present) of `prob` onto the GPU as `CuArray`s.
+
+Only the [`Contiguous`](@ref) layout is supported, since that is the layout used
+by the GPU kernel implementations, e.g. in [`GaussianVStatMMD`](@ref).
+"""
+function CUDA.cu(
+        prob::TransitionDistanceProblem{T, W, Contiguous}
+    ) where {T, W}
+    weights = isnothing(prob.weights) ? nothing : cu(prob.weights)
+    return TransitionDistanceProblem(cu(prob.data), weights)
+end
+
+"""
+    cu(pres::PreprocessResult) -> PreprocessResult
+
+Move the `TransitionDistanceProblem` held by `pres` onto the GPU, see [`cu(::TransitionDistanceProblem)`](@ref).
+"""
+function CUDA.cu(pres::PreprocessResult)
+    return PreprocessResult(cu(pres.prob), pres.info)
 end
 
 end # module

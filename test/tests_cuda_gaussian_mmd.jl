@@ -24,6 +24,23 @@ if CUDA.functional()
             end
         end
 
+        @testset "cu conversion of TransitionDistanceProblem/PreprocessResult" begin
+            x = rand(Float32, 2, 5, 20)
+            prob_cpu = TransitionDistanceProblem(x)
+            prob_gpu = cu(prob_cpu)
+
+            @test prob_gpu.data isa CuArray
+            @test Array(prob_gpu.data) == prob_cpu.data
+            @test layout(prob_gpu) === Contiguous
+
+            pres_cpu = PreprocessResult(prob_cpu, Dict("anchors" => rand(2, 20)))
+            pres_gpu = cu(pres_cpu)
+
+            @test pres_gpu.prob.data isa CuArray
+            @test Array(pres_gpu.prob.data) == pres_cpu.prob.data
+            @test pres_gpu.info == pres_cpu.info
+        end
+
         @testset "compute_distances end-to-end" begin
             x = rand(Float32, 2, 5, 20)
             prob_cpu = TransitionDistanceProblem(x)
