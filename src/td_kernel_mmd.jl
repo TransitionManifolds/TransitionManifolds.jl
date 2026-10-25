@@ -54,3 +54,32 @@ function compute_distances(::TransitionDistanceProblem, ::KernelVStatMMD; kwargs
         "Import the `KernelFunctions` package and provide a `kernel <: Kernel`: `KernelVStatMMD(kernel)`",
     )
 end
+
+"""
+    KernelUStatMMD(kernel::Kernel) <: AbstractTransitionDistanceAlgorithm
+
+Struct for using the maximum mean discrepancy (MMD) with any `kernel` from `KernelFunctions`
+and U-Statistic estimation to compute the transition density distances.
+
+The MMD between random variables ``X`` and ``Y`` is given by
+
+```math
+E[k(X, X')] + E[k(Y, Y')] - 2 E[k(X, Y)],
+```
+
+where ``k`` is the `kernel`.
+
+The U-Statistic estimates ``E[k(X, X')]`` and ``E[k(Y, Y')]`` using only the distinct sample pairs,
+excluding the self-pairs ``k(x_i, x_i)``. This gives a less biased estimator than [`KernelVStatMMD`](@ref)
+at the same computational cost, assuming the `kernel` is normalized such that ``k(x, x) = 1`` for all ``x``
+(e.g. a Gaussian/RBF kernel). The cross term ``E[k(X, Y)]`` is estimated the same way as in [`KernelVStatMMD`](@ref).
+"""
+struct KernelUStatMMD{T} <: AbstractTransitionDistanceAlgorithm
+    kernel::T
+end
+
+function compute_distances(::TransitionDistanceProblem, ::KernelUStatMMD; kwargs...)
+    error(
+        "Import the `KernelFunctions` package and provide a `kernel <: Kernel`: `KernelUStatMMD(kernel)`",
+    )
+end

@@ -25,10 +25,10 @@ export normalize_cloud
 include("kernel_interface.jl")
 
 include("td_gaussian_mmd.jl")
-export GaussianVStatMMD, GaussianDStatMMD
+export GaussianVStatMMD, GaussianDStatMMD, GaussianUStatMMD
 
 include("td_kernel_mmd.jl")
-export KernelVStatMMD, KernelDStatMMD
+export KernelVStatMMD, KernelDStatMMD, KernelUStatMMD
 
 include("em_diffusion_maps.jl")
 export DiffusionMaps

@@ -297,3 +297,43 @@ function convert_kernel_to_distance_matrix!(K::AbstractMatrix{T}) where {T<:Real
     end
     K[diagind(K)] .= 0
 end
+
+"""
+    apply_ustat_correction!(K::AbstractMatrix, n_samples::Union{Integer,AbstractVector{<:Integer}})
+
+Convert the diagonal entries of a V-Statistic kernel matrix `K` into (the minimally biased) U-Statistic estimates, in place.
+
+For a kernel ``k`` with ``k(x, x) = 1`` for all ``x`` (e.g. a Gaussian kernel), the V-Statistic diagonal entry
+``V_{i,i} = \\frac{1}{n_i^2} \\sum_{a,b} k(x_a, x_b)`` can be corrected into the U-Statistic
+
+```math
+U_{i,i} = \\frac{n_i V_{i,i} - 1}{n_i - 1},
+```
+
+which excludes the self-pairs ``k(x_a, x_a)`` from the estimate.
+The off-diagonal entries of `K` are left untouched, since they estimate a cross term ``E[k(X, Y)]``
+between independent random variables ``X`` and ``Y``, which does not suffer from the self-pairing bias.
+
+`n_samples` is either an `Integer` giving the (common) number of samples per anchor,
+or a `Vector{<:Integer}` giving the number of samples for the `i`-th anchor, see [`n_samples`](@ref).
+"""
+function apply_ustat_correction!(K::AbstractMatrix{T}, n_samples::Integer) where {T<:Real}
+    n_samples > 1 ||
+        throw(ArgumentError("`n_samples` must be > 1 to apply the U-Statistic correction"))
+    for i in axes(K, 1)
+        K[i, i] = (n_samples * K[i, i] - 1) / (n_samples - 1)
+    end
+end
+
+function apply_ustat_correction!(
+    K::AbstractMatrix{T}, n_samples::AbstractVector{<:Integer}
+) where {T<:Real}
+    length(n_samples) == size(K, 1) ||
+        throw(ArgumentError("`length(n_samples)` must match the number of anchors"))
+    for i in axes(K, 1)
+        n = n_samples[i]
+        n > 1 ||
+            throw(ArgumentError("each anchor must have more than 1 sample to apply the U-Statistic correction"))
+        K[i, i] = (n * K[i, i] - 1) / (n - 1)
+    end
+end
