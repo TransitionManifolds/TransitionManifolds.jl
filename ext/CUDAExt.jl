@@ -89,8 +89,8 @@ Only the [`Contiguous`](@ref) layout is supported, since that is the layout used
 by the GPU kernel implementations, e.g. in [`GaussianVStatMMD`](@ref).
 """
 function CUDA.cu(
-        prob::TransitionDistanceProblem{T, W, Contiguous}
-    ) where {T, W}
+    prob::TransitionDistanceProblem{T,W,Contiguous}
+)::TransitionDistanceProblem where {T,W}
     weights = isnothing(prob.weights) ? nothing : cu(prob.weights)
     return TransitionDistanceProblem(cu(prob.data), weights)
 end
@@ -100,7 +100,7 @@ end
 
 Move the `TransitionDistanceProblem` held by `pres` onto the GPU, see [`cu(::TransitionDistanceProblem)`](@ref).
 """
-function CUDA.cu(pres::PreprocessResult)
+function CUDA.cu(pres::PreprocessResult)::PreprocessResult
     return PreprocessResult(cu(pres.prob), pres.info)
 end
 
