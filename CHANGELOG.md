@@ -5,6 +5,8 @@
 ### Features
 - new `CUDAExt` extension: `GaussianVStatMMD` on `Contiguous`-layout `CuArray` data is computed on the GPU
 
+### Fixes
+- fixed crash in `KernelMMDExt`
 
 ## Version [v0.2.1] - 2026-08-19
 
