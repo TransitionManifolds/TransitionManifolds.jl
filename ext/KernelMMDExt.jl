@@ -21,7 +21,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelDStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
+    warn_not_symmetric(alg.kernel)
     t1 = @elapsed D = TransitionManifolds.compute_kernel_matrix(
         prob.data, alg; progress=progress
     )
@@ -98,7 +98,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelVStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
+    warn_not_symmetric(alg.kernel)
 
     t1 = @elapsed D = TransitionManifolds.compute_kernel_matrix_buffered(
         prob.data, alg; progress=progress
@@ -137,6 +137,15 @@ function TransitionManifolds.kernel_eval(
 )::T where {T<:AbstractFloat}
     kernelmatrix!(buffer, alg.kernel, ColVecs(x), ColVecs(y))
     return mean(buffer)
+end
+
+function warn_not_symmetric(k::Kernel)
+    # Unfortunately symmetry is not accessible in KernelFunctions.
+    # We do not want to rely on internal behavior (e.g. underlying metric).
+    # This test is obviously not reliable but should work in most cases.
+    x = rand(4)
+    y = rand(4)
+    k(x, y) ≈ k(y, x) || @warn "The kernel is not symmetric"
 end
 
 end # module
