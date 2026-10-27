@@ -100,7 +100,7 @@ end
         kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
         alg = KernelDStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
-        @test_warn "The metric is not symmetric." compute_distances(x, alg)
+        @test_warn "The kernel is not symmetric" compute_distances(x, alg)
     end
 
     @testset "compute_distances" begin
@@ -130,7 +130,7 @@ end
         kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
         alg = KernelVStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
-        @test_warn "The metric is not symmetric." compute_distances(x, alg)
+        @test_warn "The kernel is not symmetric" compute_distances(x, alg)
     end
 
     @testset "compute_distances" begin

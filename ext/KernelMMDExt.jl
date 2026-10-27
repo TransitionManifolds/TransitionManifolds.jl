@@ -21,7 +21,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelDStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
+    warn_not_symmetric(alg.kernel)
     t1 = @elapsed D = TransitionManifolds.compute_kernel_matrix(
         prob.data, alg; progress=progress
     )
@@ -98,7 +98,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelVStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    !isa(alg.kernel.kernel.metric, SemiMetric) && @warn "The metric is not symmetric."
+    warn_not_symmetric(alg.kernel)
 
     t1 = @elapsed D = TransitionManifolds.compute_kernel_matrix_buffered(
         prob.data, alg; progress=progress
@@ -165,12 +165,7 @@ function TransitionManifolds.compute_distances(
     alg::KernelUStatMMD{<:Kernel};
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
-    isa(alg.kernel.kernel.metric, SemiMetric) || throw(
-        ArgumentError(
-            "`KernelUStatMMD` requires a kernel with a symmetric metric satisfying `d(x, x) = 0`, " *
-            " got metric `$(alg.kernel.kernel.metric)`",
-        ),
-    )
+    warn_not_symmetric(alg.kernel)
     check_kernel_self_normalized(alg.kernel)
 
     # reuse the V-Statistic implementation, then correct the diagonal
@@ -206,6 +201,15 @@ function TransitionManifolds.compute_distances(
     return compute_distances(
         TransitionManifolds.convert_contiguous_to_jagged(prob), alg; kwargs...
     )
+end
+
+function warn_not_symmetric(k::Kernel)
+    # Unfortunately symmetry is not accessible in KernelFunctions.
+    # We do not want to rely on internal behavior (e.g. underlying metric).
+    # This test is obviously not reliable but should work in most cases.
+    x = rand(4)
+    y = rand(4)
+    k(x, y) ≈ k(y, x) || @warn "The kernel is not symmetric"
 end
 
 end # module

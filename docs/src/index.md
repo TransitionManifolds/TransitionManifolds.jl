@@ -159,3 +159,4 @@ x = rand(2, 5, 20)
 alg = GaussianVStatMMD()
 res = compute_distances(cu(x), alg)
 ```
+The `cu` function can also be applied directly to a [`TransitionDistanceProblem`](@ref) or a [`PreprocessResult`](@ref) to move the contained data to the GPU.
