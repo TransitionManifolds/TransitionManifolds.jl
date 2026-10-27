@@ -2,7 +2,6 @@
 # Shared for GaussianDStatMMD / GaussianVStatMMD / GaussianUStatMMD
 #-----------------------------------------------------------------------------
 @testset "Gaussian*StatMMD shared behavior" begin
-    # NOTE 1 (combined): identical shape/symmetry/zero-diag/bandwidth/elapsed checks.
     @testset "output" begin
         algs = [
             GaussianDStatMMD(0.123),
@@ -29,7 +28,6 @@
         end
     end
 
-    # NOTE 2 (combined) and NOTE 3 (combined): identical `types`/`cast` checks.
     type_algs = [
         GaussianDStatMMD(1),
         GaussianVStatMMD(; bandwidth=1, blocksize=1),
@@ -74,7 +72,6 @@
         end
     end
 
-    # NOTE 4 (combined): identical across D/V/UStat (just a different zero-arg constructor).
     @testset "automatic bandwidth" begin
         algs = [GaussianDStatMMD(), GaussianVStatMMD(), GaussianUStatMMD()]
 
@@ -98,8 +95,6 @@ end
 # GaussianDStatMMD
 #-----------------------------------------------------------------------------
 @testset "GaussianDStatMMD" begin
-    # NOTE 7: D-Stat vs V-Stat kernel_eval use different estimator formulas entirely
-    # (D-Stat shifts by one, V-Stat averages all pairs incl. weighted variant) -> keep separate.
     @testset "kernel eval" begin
         alg = GaussianDStatMMD(sqrt(2))
         x = transpose([1.0 1; 2 3; 0 -1])  # n = 3, d = 2
@@ -128,17 +123,12 @@ end
         end
     end
 
-    # NOTE 6: constructor param sets differ (D has no `blocksize`, V has no constructor
-    # test at all, U checks `blocksize` too) -> keep separate; VStatMMD's missing test is a gap.
     @testset "constructor" begin
         @test_throws ArgumentError GaussianDStatMMD(0)
         @test_throws ArgumentError GaussianDStatMMD(-0.2)
     end
 
     @testset "compute_distances" begin
-        # NOTE 5: tolerance is deliberately different per algorithm (D:0.02 vs V:0.001,
-        # documenting the bias/variance tradeoff) and UStat has no such test (gap) ->
-        # keep separate rather than force a shared tolerance parameter.
         @testset "convergence to 0" begin
             alg = GaussianDStatMMD(0.3)
             seed!(1234)
@@ -157,8 +147,6 @@ end
 # GaussianVStatMMD
 #-----------------------------------------------------------------------------
 @testset "GaussianVStatMMD" begin
-    # NOTE 7: see NOTE 7 above (GaussianDStatMMD) -- different estimator formula, plus
-    # this one also covers the weighted variant which D/UStat don't have -> keep separate.
     @testset "kernel_eval" begin
         alg = GaussianVStatMMD(; bandwidth=sqrt(2))
         x = transpose([1.0 1; 2 3; 0 -1])
@@ -185,9 +173,6 @@ end
     end
 
     @testset "compute_distances" begin
-        # NOTE 9: `blocksize` consistency is only meaningful for the blocked V/UStat
-        # implementation (DStat has no `blocksize`, and UStat has no analogous test yet
-        # -- a gap) -> keep separate.
         @testset "blocksize" begin
             # test same result for different blocksizes
             alg = GaussianVStatMMD(; bandwidth=0.123)
@@ -205,7 +190,6 @@ end
             end
         end
 
-        # NOTE 5: see NOTE 5 above -> keep separate (different tolerance per algorithm).
         @testset "convergence to 0" begin
             alg = GaussianVStatMMD(; bandwidth=0.3)
             seed!(1234)
@@ -219,8 +203,6 @@ end
         end
     end
 
-    # NOTE 8: weighted samples are unique to VStatMMD (D/UStat explicitly don't support
-    # them) -> cannot be combined with anything.
     @testset "compute_distances (weighted)" begin
         @testset "output" begin
             alg = GaussianVStatMMD(; bandwidth=0.123, blocksize=1)
@@ -320,16 +302,12 @@ end
 # GaussianUStatMMD
 #-----------------------------------------------------------------------------
 @testset "GaussianUStatMMD" begin
-    # NOTE 6: see NOTE 6 above -> keep separate (different param sets per algorithm).
     @testset "constructor" begin
         @test_throws ArgumentError GaussianUStatMMD(; bandwidth=0)
         @test_throws ArgumentError GaussianUStatMMD(; bandwidth=-0.2)
         @test_throws ArgumentError GaussianUStatMMD(; blocksize=0)
     end
 
-    # NOTE 11: this is the defining characteristic test of UStat (verifying the
-    # diagonal correction against a manually-corrected VStat matrix) -> inherently
-    # UStat-specific, cannot be combined with anything.
     @testset "matches corrected GaussianVStatMMD" begin
         valg = GaussianVStatMMD(; bandwidth=0.123, blocksize=1)
         ualg = GaussianUStatMMD(; bandwidth=0.123, blocksize=1)
@@ -358,10 +336,6 @@ end
     end
 
     @testset "compute_distances" begin
-        # NOTE 10: DStatMMD/VStatMMD don't support weights either but have no analogous
-        # test (a gap); mirrors NOTE 19 in tests_td_kernel_mmd.jl -> keep separate for now,
-        # but if the gaps are filled this could become one shared "weights not supported"
-        # loop across both files/algorithms.
         @testset "weights not supported" begin
             alg = GaussianUStatMMD(; bandwidth=0.123)
             x = rand(2, 4, 3)
