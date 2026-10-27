@@ -400,7 +400,7 @@ function compute_distances(
     vstat_alg = GaussianVStatMMD(alg.bandwidth, alg.blocksize)
     t1 = @elapsed begin
         D = compute_kernel_matrix_buffered(prob.data, vstat_alg; progress=progress)
-        apply_ustat_correction!(D, n_samples(prob))
+        apply_ustat_correction!(D, n_samples(prob), 1.0)
     end
 
     t2 = @elapsed convert_kernel_to_distance_matrix!(D)

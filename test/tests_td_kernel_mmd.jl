@@ -156,15 +156,32 @@ end
 # KernelUStatMMD
 #-----------------------------------------------------------------------------
 @testset "KernelUStatMMD" begin
-    @testset "errors if non-symmetric metric" begin
+    @testset "warns if non-symmetric metric" begin
         kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
         alg = KernelUStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
-        @test_throws ArgumentError compute_distances(x, alg)
+        @test_warn "The kernel is not symmetric" compute_distances(x, alg)
+    end
+
+    @testset "supports kernel with normalization constant" begin
+        # k(x, x) = kappa(0) = 1.5 for all x
+        kernel = _OffsetTestKernel(SqEuclidean()) ∘ ScaleTransform(1.0)
+        alg = KernelUStatMMD(kernel)
+        valg = KernelVStatMMD(kernel)
+        x = [rand(2, 4), rand(2, 3), rand(2, 2)]
+        prob = TransitionDistanceProblem(x)
+
+        expected = TransitionManifolds.compute_kernel_matrix_buffered(prob.data, valg)
+        TransitionManifolds.apply_ustat_correction!(expected, n_samples(prob), 1.5)
+        TransitionManifolds.convert_kernel_to_distance_matrix!(expected)
+
+        @test compute_distances(prob, alg).distances ≈ expected
     end
 
     @testset "errors if kernel is not self-normalized" begin
-        kernel = _OffsetTestKernel(SqEuclidean()) ∘ ScaleTransform(1.0)
+        # k(x, x) = x'x varies with x (e.g. k(0, 0) = 0 but k(1, 1) = 1), so this
+        # kernel has no well-defined self-normalization constant.
+        kernel = LinearKernel() ∘ ScaleTransform(1.0)
         alg = KernelUStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
         @test_throws ArgumentError compute_distances(x, alg)

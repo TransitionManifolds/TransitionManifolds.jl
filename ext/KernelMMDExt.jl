@@ -141,21 +141,24 @@ end
 
 # ---------------- KernelUStatMMD ---------------------------
 
-# `apply_ustat_correction!` assumes `k(x, x) == 1` for all `x`.
-function check_kernel_self_normalized(k::Kernel)
-    kxx = KernelFunctions.kappa(k.kernel, 0.0)
-    isapprox(kxx, 1.0; atol=sqrt(eps(Float64))) || throw(
+# `apply_ustat_correction!` assumes `k(x, x) == y` for all `x`.
+function check_kernel_self_normalized(k::Kernel)::Float64
+    y = k(0, 0)
+    y1 = k(1, 1)
+    isapprox(y1, y; atol=sqrt(eps(Float64))) || throw(
         ArgumentError(
-            "`KernelUStatMMD` requires a kernel with `k(x, x) == 1` for all `x`, but got `k(x, x) = $kxx`",
+            "`KernelUStatMMD` requires a kernel with `k(x, x) == y` for all `x`, but got `k(0, 0) = $y` and `k(1, 1) = $y1`",
         ),
     )
+    return Float64(y)
 end
 
 """
     compute_distances(prob, alg::KernelUStatMMD; kwargs...) -> TransitionDistanceResult
 
 The [`KernelUStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Weighted samples are not supported.
-The `kernel` must satisfy `k(x,x) == 1` for all `x` (e.g. a Gaussian/RBF kernel), which requires a symmetric metric satisfying `d(x,x) = 0`.
+The `kernel` must satisfy `k(x, x) == y` for some constant `y` and all `x` (e.g. a Gaussian/RBF kernel, with `y = 1`);
+this is checked and `y` is inferred automatically. A warning is issued if the kernel appears to be non-symmetric.
 The `res.info` dictionary contains
 
   - `res.info["elapsed"]`: the elapsed time
@@ -166,7 +169,7 @@ function TransitionManifolds.compute_distances(
     progress::Bool=false,
 )::TransitionDistanceResult{T} where {T<:AbstractFloat}
     warn_not_symmetric(alg.kernel)
-    check_kernel_self_normalized(alg.kernel)
+    y = check_kernel_self_normalized(alg.kernel)
 
     # reuse the V-Statistic implementation, then correct the diagonal
     vstat_alg = KernelVStatMMD(alg.kernel)
@@ -174,7 +177,7 @@ function TransitionManifolds.compute_distances(
         D = TransitionManifolds.compute_kernel_matrix_buffered(
             prob.data, vstat_alg; progress=progress
         )
-        TransitionManifolds.apply_ustat_correction!(D, n_samples(prob))
+        TransitionManifolds.apply_ustat_correction!(D, n_samples(prob), y)
     end
 
     t2 = @elapsed TransitionManifolds.convert_kernel_to_distance_matrix!(D)

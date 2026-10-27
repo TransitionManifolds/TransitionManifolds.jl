@@ -339,7 +339,7 @@ end
             prob = TransitionDistanceProblem(x)
 
             expected = TransitionManifolds.compute_kernel_matrix_buffered(prob.data, valg)
-            TransitionManifolds.apply_ustat_correction!(expected, n_samples(prob))
+            TransitionManifolds.apply_ustat_correction!(expected, n_samples(prob), 1.0)
             TransitionManifolds.convert_kernel_to_distance_matrix!(expected)
 
             @test compute_distances(prob, ualg).distances ≈ expected
@@ -350,7 +350,7 @@ end
             prob = TransitionDistanceProblem(x)
 
             expected = TransitionManifolds.compute_kernel_matrix_buffered(prob.data, valg)
-            TransitionManifolds.apply_ustat_correction!(expected, n_samples(prob))
+            TransitionManifolds.apply_ustat_correction!(expected, n_samples(prob), 1.0)
             TransitionManifolds.convert_kernel_to_distance_matrix!(expected)
 
             @test compute_distances(prob, ualg).distances ≈ expected
