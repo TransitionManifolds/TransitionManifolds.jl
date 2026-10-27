@@ -329,3 +329,93 @@ function kernel_eval(
     )
     return sum(dist_sq) / sum(wx) / sum(wy)
 end
+
+# ---------------- GaussianUStatMMD ---------------------------
+"""
+    GaussianUStatMMD(bandwidth=nothing, blocksize=20) <: AbstractTransitionDistanceAlgorithm
+
+Struct for using the maximum mean discrepancy (MMD) with a Gaussian kernel
+and U-Statistic estimation to compute the transition density distances.
+
+The MMD between random variables ``X`` and ``Y`` is given by
+
+```math
+E[k(X, X')] + E[k(Y, Y')] - 2 E[k(X, Y)].
+```
+
+Here, ``k`` is a Gaussian kernel:
+``k(x, y) := exp(-||x - y||^2 / σ^2)``
+where ``σ`` is called the `bandwidth`.
+
+The U-Statistic estimates ``E[k(X, X')]`` and ``E[k(Y, Y')]`` using only the distinct sample pairs,
+excluding the self-pairs ``k(x_i, x_i)``. This gives a less biased estimator than [`GaussianVStatMMD`](@ref)
+at the same ``O(n^2)`` computational cost. The cross term ``E[k(X, Y)]`` does not suffer from this bias
+and is estimated the same way as in [`GaussianVStatMMD`](@ref).
+
+Internally, this computes the V-Statistic kernel matrix and applies a bias correction to its diagonal
+(via `apply_ustat_correction!`). This means the same CPU and GPU implementations as
+[`GaussianVStatMMD`](@ref) are reused, including automatic GPU dispatch via `CUDA.jl`.
+Weighted samples are not supported.
+
+The `bandwidth` and `blocksize` behave exactly as for [`GaussianVStatMMD`](@ref).
+"""
+struct GaussianUStatMMD <: AbstractTransitionDistanceAlgorithm
+    bandwidth::Union{Float64,Nothing}
+    blocksize::Int
+
+    function GaussianUStatMMD(bandwidth::Union{Real,Nothing}, blocksize::Integer)
+        isnothing(bandwidth) ||
+            bandwidth > 0 ||
+            throw(ArgumentError("bandwidth has to be > 0"))
+        blocksize > 0 || throw(ArgumentError("blocksize has to be > 0"))
+        new(bandwidth, blocksize)
+    end
+end
+GaussianUStatMMD(; bandwidth::Union{Real,Nothing}=nothing, blocksize::Integer=20) = GaussianUStatMMD(
+    bandwidth, blocksize
+)
+
+"""
+    compute_distances(prob, alg::GaussianUStatMMD; kwargs...) -> TransitionDistanceResult
+
+The [`GaussianUStatMMD`](@ref) algorithm works with [`Contiguous`](@ref) and [`Jagged`](@ref) layout. Weighted samples are not supported.
+The `res.info` dictionary contains
+
+  - `res.info["elapsed"]`: the elapsed time
+  - `res.info["bandwidth"]`: the used bandwidth
+"""
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
+    alg::GaussianUStatMMD;
+    progress::Bool=false,
+)::TransitionDistanceResult{T} where {T<:AbstractFloat}
+    # automatic bandwidth selection
+    if isnothing(alg.bandwidth)
+        subsamples = subsamples_from_data(prob.data, 100)
+        bandwidth = tune_bandwidth_gaussian(subsamples)
+        alg = GaussianUStatMMD(bandwidth, alg.blocksize)
+    end
+
+    # reuse the V-Statistic implementation (CPU and GPU), then correct the diagonal
+    vstat_alg = GaussianVStatMMD(alg.bandwidth, alg.blocksize)
+    t1 = @elapsed begin
+        D = compute_kernel_matrix_buffered(prob.data, vstat_alg; progress=progress)
+        apply_ustat_correction!(D, n_samples(prob), 1.0)
+    end
+
+    t2 = @elapsed convert_kernel_to_distance_matrix!(D)
+    return TransitionDistanceResult(
+        D, Dict("bandwidth" => alg.bandwidth, "elapsed" => t1 + t2)
+    )
+end
+
+# This implementation casts integers to Float32. Floats are handled above.
+function compute_distances(
+    prob::TransitionDistanceProblem{T,Nothing,<:AbstractDataLayout},
+    alg::GaussianUStatMMD;
+    kwargs...,
+)::TransitionDistanceResult where {T<:Real}
+    @info "Casting data from $T to Float32 for distance computation"
+    prob = TransitionDistanceProblem(map(x -> Float32.(x), prob.data))
+    return compute_distances(prob, alg; kwargs...)
+end

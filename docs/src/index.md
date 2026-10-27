@@ -58,11 +58,19 @@ GaussianVStatMMD
 ```
 
 ```@docs
+GaussianUStatMMD
+```
+
+```@docs
 KernelDStatMMD
 ```
 
 ```@docs
 KernelVStatMMD
+```
+
+```@docs
+KernelUStatMMD
 ```
 
 
