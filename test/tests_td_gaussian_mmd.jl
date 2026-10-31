@@ -95,6 +95,14 @@ end
 # GaussianDStatMMD
 #-----------------------------------------------------------------------------
 @testset "GaussianDStatMMD" begin
+    @testset "constructor" begin
+        @test_throws ArgumentError GaussianDStatMMD(0)
+        @test_throws ArgumentError GaussianDStatMMD(-0.2)
+
+        alg = GaussianDStatMMD()
+        @test isnothing(alg.bandwidth)
+    end
+
     @testset "kernel eval" begin
         alg = GaussianDStatMMD(sqrt(2))
         x = transpose([1.0 1; 2 3; 0 -1])  # n = 3, d = 2
@@ -123,11 +131,6 @@ end
         end
     end
 
-    @testset "constructor" begin
-        @test_throws ArgumentError GaussianDStatMMD(0)
-        @test_throws ArgumentError GaussianDStatMMD(-0.2)
-    end
-
     @testset "compute_distances" begin
         @testset "convergence to 0" begin
             alg = GaussianDStatMMD(0.3)
@@ -147,6 +150,16 @@ end
 # GaussianVStatMMD
 #-----------------------------------------------------------------------------
 @testset "GaussianVStatMMD" begin
+    @testset "constructor" begin
+        @test_throws ArgumentError GaussianVStatMMD(; bandwidth=0)
+        @test_throws ArgumentError GaussianVStatMMD(; bandwidth=-0.2)
+        @test_throws ArgumentError GaussianVStatMMD(; blocksize=0)
+
+        alg = GaussianVStatMMD()
+        @test isnothing(alg.bandwidth)
+        @test alg.blocksize == 20
+    end
+
     @testset "kernel_eval" begin
         alg = GaussianVStatMMD(; bandwidth=sqrt(2))
         x = transpose([1.0 1; 2 3; 0 -1])
@@ -306,6 +319,10 @@ end
         @test_throws ArgumentError GaussianUStatMMD(; bandwidth=0)
         @test_throws ArgumentError GaussianUStatMMD(; bandwidth=-0.2)
         @test_throws ArgumentError GaussianUStatMMD(; blocksize=0)
+
+        alg = GaussianUStatMMD()
+        @test isnothing(alg.bandwidth)
+        @test alg.blocksize == 20
     end
 
     @testset "matches corrected GaussianVStatMMD" begin
