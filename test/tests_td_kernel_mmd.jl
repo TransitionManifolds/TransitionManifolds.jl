@@ -90,19 +90,22 @@ KernelFunctions.metric(k::_OffsetTestKernel) = k.metric
             @test D1 ≈ D2
         end
     end
+
+    @testset "warn if non-symmetric kernel" begin
+        kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
+        algs = [KernelDStatMMD(kernel), KernelVStatMMD(kernel), KernelUStatMMD(kernel)]
+        x = rand(Float64, 2, 4, 3)
+
+        @testset "$(nameof(typeof(alg)))" for alg in algs
+            @test_warn "The kernel is not symmetric" compute_distances(x, alg)
+        end
+    end
 end
 
 #-----------------------------------------------------------------------------
 # KernelDStatMMD
 #-----------------------------------------------------------------------------
 @testset "KernelDStatMMD" begin
-    @testset "warn if non-symmetric kernel" begin
-        kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
-        alg = KernelDStatMMD(kernel)
-        x = rand(Float64, 2, 4, 3)
-        @test_warn "The kernel is not symmetric" compute_distances(x, alg)
-    end
-
     @testset "compute_distances" begin
         # define Gaussian kernel
         bandwidth = 0.3
@@ -126,13 +129,6 @@ end
 # KernelVStatMMD
 #-----------------------------------------------------------------------------
 @testset "KernelVStatMMD" begin
-    @testset "warn if non-symmetric kernel" begin
-        kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
-        alg = KernelVStatMMD(kernel)
-        x = rand(Float64, 2, 4, 3)
-        @test_warn "The kernel is not symmetric" compute_distances(x, alg)
-    end
-
     @testset "compute_distances" begin
         # define Gaussian kernel
         bandwidth = 0.3
@@ -156,13 +152,6 @@ end
 # KernelUStatMMD
 #-----------------------------------------------------------------------------
 @testset "KernelUStatMMD" begin
-    @testset "warns if non-symmetric metric" begin
-        kernel = ExponentialKernel(; metric=Distances.KLDivergence()) ∘ ScaleTransform(1.0)
-        alg = KernelUStatMMD(kernel)
-        x = rand(Float64, 2, 4, 3)
-        @test_warn "The kernel is not symmetric" compute_distances(x, alg)
-    end
-
     @testset "supports kernel with normalization constant" begin
         # k(x, x) = kappa(0) = 1.5 for all x
         kernel = _OffsetTestKernel(SqEuclidean()) ∘ ScaleTransform(1.0)
