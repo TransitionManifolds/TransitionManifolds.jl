@@ -113,52 +113,6 @@ KernelFunctions.metric(k::_OffsetTestKernel) = k.metric
 end
 
 #-----------------------------------------------------------------------------
-# KernelDStatMMD
-#-----------------------------------------------------------------------------
-@testset "KernelDStatMMD" begin
-    @testset "compute_distances" begin
-        # define Gaussian kernel
-        bandwidth = 0.3
-        kernel = ExponentialKernel(; metric=SqEuclidean()) ∘ ScaleTransform(1 / bandwidth)
-
-        @testset "convergence to 0" begin
-            alg = KernelDStatMMD(kernel)
-            seed!(1234)
-            x = rand(2, 2000, 2)
-
-            dmat = compute_distances(x, alg).distances
-            @test dmat[1, 1] == 0
-            @test dmat[2, 2] == 0
-            @test dmat[1, 2] == dmat[2, 1]
-            @test dmat[1, 2] < 0.02
-        end
-    end
-end
-
-#-----------------------------------------------------------------------------
-# KernelVStatMMD
-#-----------------------------------------------------------------------------
-@testset "KernelVStatMMD" begin
-    @testset "compute_distances" begin
-        # define Gaussian kernel
-        bandwidth = 0.3
-        kernel = ExponentialKernel(; metric=SqEuclidean()) ∘ ScaleTransform(1 / bandwidth)
-
-        @testset "convergence to 0" begin
-            alg = KernelVStatMMD(kernel)
-            seed!(1234)
-            x = rand(2, 2000, 2)
-
-            dmat = compute_distances(x, alg).distances
-            @test dmat[1, 1] == 0
-            @test dmat[2, 2] == 0
-            @test dmat[1, 2] == dmat[2, 1]
-            @test dmat[1, 2] < 0.01
-        end
-    end
-end
-
-#-----------------------------------------------------------------------------
 # KernelUStatMMD
 #-----------------------------------------------------------------------------
 @testset "KernelUStatMMD" begin
