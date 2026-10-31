@@ -89,6 +89,25 @@
             end
         end
     end
+
+    @testset "convergence to 0" begin
+        algs = [
+            GaussianDStatMMD(0.3),
+            GaussianVStatMMD(; bandwidth=0.3),
+            GaussianUStatMMD(; bandwidth=0.3),
+        ]
+        bounds = [0.02, 0.001, 0.001]
+        seed!(1234)
+        x = rand(2, 2000, 2)
+
+        @testset "$(nameof(typeof(alg)))" for (alg, b) in zip(algs, bounds)
+            dmat = compute_distances(x, alg).distances
+            @test dmat[1, 1] == 0
+            @test dmat[2, 2] == 0
+            @test dmat[1, 2] == dmat[2, 1]
+            @test dmat[1, 2] < b
+        end
+    end
 end
 
 #-----------------------------------------------------------------------------
@@ -128,20 +147,6 @@ end
         @testset "x Float32" begin
             expected = sum([exp(-2.5), exp(-10)]) / 2.0
             @test TransitionManifolds.kernel_eval(x32, alg) ≈ expected
-        end
-    end
-
-    @testset "compute_distances" begin
-        @testset "convergence to 0" begin
-            alg = GaussianDStatMMD(0.3)
-            seed!(1234)
-            x = rand(2, 2000, 2)
-
-            dmat = compute_distances(x, alg).distances
-            @test dmat[1, 1] == 0
-            @test dmat[2, 2] == 0
-            @test dmat[1, 2] == dmat[2, 1]
-            @test dmat[1, 2] < 0.02
         end
     end
 end
@@ -201,18 +206,6 @@ end
                 res = compute_distances(prob, alg)
                 @test res.distances ≈ expected
             end
-        end
-
-        @testset "convergence to 0" begin
-            alg = GaussianVStatMMD(; bandwidth=0.3)
-            seed!(1234)
-            x = rand(2, 2000, 2)
-
-            dmat = compute_distances(x, alg).distances
-            @test dmat[1, 1] == 0
-            @test dmat[2, 2] == 0
-            @test dmat[1, 2] == dmat[2, 1]
-            @test dmat[1, 2] < 0.001
         end
     end
 
