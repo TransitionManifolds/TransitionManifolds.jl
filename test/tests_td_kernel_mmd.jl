@@ -100,6 +100,16 @@ KernelFunctions.metric(k::_OffsetTestKernel) = k.metric
             @test_warn "The kernel is not symmetric" compute_distances(x, alg)
         end
     end
+
+    @testset "weights not supported" begin
+        x = rand(2, 4, 3)
+        w = rand(4, 3)
+        prob = TransitionDistanceProblem(x, w)
+
+        @testset "$(nameof(typeof(alg)))" for alg in algs
+            @test_throws ErrorException compute_distances(prob, alg)
+        end
+    end
 end
 
 #-----------------------------------------------------------------------------
@@ -174,19 +184,5 @@ end
         alg = KernelUStatMMD(kernel)
         x = rand(Float64, 2, 4, 3)
         @test_throws ArgumentError compute_distances(x, alg)
-    end
-
-    @testset "compute_distances" begin
-        # define Gaussian kernel
-        bandwidth = 0.3
-        kernel = ExponentialKernel(; metric=SqEuclidean()) ∘ ScaleTransform(1 / bandwidth)
-
-        @testset "weights not supported" begin
-            alg = KernelUStatMMD(kernel)
-            x = rand(2, 4, 3)
-            w = rand(4, 3)
-            prob = TransitionDistanceProblem(x, w)
-            @test_throws ErrorException compute_distances(prob, alg)
-        end
     end
 end
