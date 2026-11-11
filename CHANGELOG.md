@@ -3,8 +3,8 @@
 ## Unreleased
 
 ### Features
-- new `GaussianUStatMMD` and `KernelUStatMMD` algorithms, are less biased the V-Statistic but still ensure positive MMD.
-- new `CUDAExt` extension: `GaussianVStatMMD` on `Contiguous`-layout `CuArray` data is computed on the GPU
+- new `GaussianUStatMMD` and `KernelUStatMMD` algorithms that are less biased than V-Statistic
+- new `CUDAExt` extension: `GaussianVStatMMD` and `GaussianUStatMMD` on `Contiguous`-layout `CuArray` data is computed on the GPU
 
 ### Fixes
 - fixed crash in `KernelMMDExt`
